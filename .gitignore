@@ -75,3 +75,9 @@ Assets/AssetStoreTools*
 Assets/Example Avatar - USED FOR MATE ENGINE
 ProjectSettings/Packages
 UserSettings/Layouts
+
+# Claude stuff to avoid making things dirty
+CLAUDE.md
+.claude/
+CLAUDE.local.md
+.mcp.json
