@@ -7,7 +7,8 @@ This fork adds network clients, API keys, external processes and user-supplied f
 - API keys live only in `qol_secrets.json` (in `SaveLoadHandler`'s `BaseDir`, gitignored) or environment variables (`MEQOL_*`). Never in `qol_settings.json`, character loadouts, exported `.zip` files, chat history, logs or the repo.
 - Never log a key, an `Authorization` header or a full request body. Log provider id, URL host, status code and timing only.
 - Key fields in the UI are masked and never echoed into chat bubbles or error messages.
-- Sending a key over plain `http://` is refused unless the host is `localhost` / `127.0.0.1` (Ollama, LM Studio).
+- Sending a key over plain `http://` is refused unless the host is `localhost` / `127.0.0.1` (Ollama, LM Studio). Credentials embedded in a URL are refused. (`Core/AI/Http/EndpointPolicy.cs`, tested.)
+- Implemented: `qol_secrets.json` is encrypted with Windows DPAPI for the current user plus app-specific entropy. A copied file is unreadable for another account or PC; a file that can't be decrypted is ignored with a "re-enter your keys" warning instead of crashing. This does not protect against malware running as you. The Linux port stores keys as plain base64 until a keyring integration exists. Stored keys are never shown again in the UI; it only shows "Key saved".
 
 ## Network
 
@@ -16,7 +17,7 @@ This fork adds network clients, API keys, external processes and user-supplied f
   - Keep LLMUnity's `LLM.remote` off. When on, it serves on `0.0.0.0:13333`.
 - Outbound calls go only to the base URL the user configured for each provider. No telemetry, no auto-update, no other endpoints.
 - HTTPS for every remote provider; certificate validation is never disabled.
-- Every request has a timeout and a cancellation token. Response bodies and SSE streams have a size cap so a bad server can't exhaust memory.
+- Every request has a timeout and a cancellation token. Response bodies and SSE streams have a size cap so a bad server can't exhaust memory. Implemented for chat: 30 s connect, 60 s idle between chunks, 1 MB per SSE line, 200,000 characters per reply, 4 KB error bodies (shown as one trimmed line).
 
 ## Model output is untrusted input
 

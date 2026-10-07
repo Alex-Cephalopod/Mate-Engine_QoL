@@ -20,6 +20,11 @@ public class SaveLoadHandler : MonoBehaviour
 
     private string FilePath => Path.Combine(BaseDir, fileName);
 
+    // QoL: the per-instance data folder (honours --datadir) for fork code. Valid after Awake has parsed the args.
+    public static string DataDirectory => string.IsNullOrEmpty(customDataDir)
+        ? Application.persistentDataPath
+        : Path.Combine(Application.persistentDataPath, customDataDir);
+
     private void Awake()
     {
         if (Instance != null && Instance != this)

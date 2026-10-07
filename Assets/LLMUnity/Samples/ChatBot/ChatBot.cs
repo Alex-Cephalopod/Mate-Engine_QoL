@@ -125,6 +125,7 @@ namespace LLMUnitySamples
 
             ShowLoadedMessages();
             _ = llmCharacter.Warmup(WarmUpCallback);
+            if (MateEngineQoL.Bridge.QolChatRouter.UsesRemoteProvider) WarmUpCallback(); // QoL: remote chat doesn't wait for the local model
             FindAvatarSmart();
         }
 
@@ -267,7 +268,8 @@ namespace LLMUnitySamples
                 streamAudioSource.Play();
             if (avatarAnimator != null) avatarAnimator.SetBool(isTalkingHash, true);
 
-            Task chatTask = llmCharacter.Chat(
+            MateEngineQoL.Bridge.QolChatRouter.Send( // QoL: was llmCharacter.Chat(...); routes to local or remote provider
+                llmCharacter,
                 message,
                 (partial) => { aiBubble.SetText(partial); layoutDirty = true; },
                 () =>
@@ -315,6 +317,7 @@ namespace LLMUnitySamples
 
         public void CancelRequests()
         {
+            MateEngineQoL.Bridge.QolChatRouter.Cancel(); // QoL
             llmCharacter.CancelRequests();
             AllowInput();
         }

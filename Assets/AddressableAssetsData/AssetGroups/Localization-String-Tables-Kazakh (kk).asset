@@ -15,6 +15,12 @@ MonoBehaviour:
   m_GroupName: Localization-String-Tables-Kazakh (kk)
   m_GUID: faa23e6afaea8e440886da78944dfb39
   m_SerializeEntries:
+  - m_GUID: 1739ab5db38f0a248af6bbc097e7dbbd
+    m_Address: QoL_kk
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-kk
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5e57fcb3872e4be4589bbb68c1c5af08
     m_Address: Languages (UI)_kk
     m_ReadOnly: 1

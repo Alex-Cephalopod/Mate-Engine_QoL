@@ -23,6 +23,8 @@ An asmdef cannot reference Assembly-CSharp, which is why anything touching `Chat
   - `WarmUpCallback()` (line 303) unblocks input after the local model warms up; `Start()` calls `llmCharacter.Warmup`.
   - `ShowLoadedMessages()` (line 237) renders `llmCharacter.chat` as bubbles.
 - **Local LLM:** LLMUnity 2.5.1. Scene `LLMCharacter` has `save: ZomeAI`, `saveCache: 1`, `remote: 0`. Useful API: `AddPlayerMessage`, `AddAIMessage`, `AddMessage(role, content)`, `Save(filename)`, `Load(filename)`, `ClearChat`, `SetPrompt(prompt, clearChat)`.
+- **Fork hooks (`// QoL:`):** `onInputFieldSubmit` calls `QolChatRouter.Send(llmCharacter, ...)` instead of `llmCharacter.Chat(...)`; `CancelRequests` also calls `QolChatRouter.Cancel()`; `Start` calls `WarmUpCallback()` immediately when a remote provider is active so input isn't blocked on the local model.
+- **Router (`Bridge/QolChatRouter.cs`):** with provider `upstream-local` it calls `LLMCharacter.Chat` unchanged. Otherwise it builds the request from `llmCharacter.prompt` + `llmCharacter.chat` (roles by position, `HistoryMessages` most recent), streams from the provider, then `AddPlayerMessage`/`AddAIMessage` and writes the history JSON in upstream's `ChatListWrapper` format (skipping the KV-cache step, which needs the local model). Errors show in the AI bubble as `[!] ...` and are not saved. `ReplyDelta`/`ReplyCompleted` events fire for both paths (voice pipeline hook).
 - **Context size:** `SettingsHandlerDropdowns` sets `LLM.contextSize`.
 - **Model files are gitignored** (`Assets/StreamingAssets/undreamai-*-llamacpp`, `*.gguf`). A fresh clone has no local model.
 
@@ -43,8 +45,18 @@ An asmdef cannot reference Assembly-CSharp, which is why anything touching `Chat
 - **First-run import:** `Bridge/SteamDataImporter.cs` runs at `BeforeSceneLoad`. If the fork folder has no `settings.json` and no `qol_import.json`, it copies the Steam folder in (`Core/Import/DataFolderImport.cs`): read-only on the source, never overwrites, skips `Player*.log`, `SteamDRM.token`, `ZomeAI.cache`, rewrites absolute paths inside `.json` files, records the result in `qol_import.json`. Re-run without overwriting via **MateEngine → QoL → Import Steam Data**; to redo it from scratch, delete the fork folder.
 - `PlayerPrefs` (registry, keyed by company/product) is not imported: FPS limit, a legacy model-path key, blendshape preset paths, LLMUnity debug flags.
 
-- `Assets/MATE ENGINE - Scripts/Settings/SaveLoadHandler.cs`: `BaseDir` (line 17) is `persistentDataPath`, or `persistentDataPath/<--datadir>` for extra instances. It is a **private** property; Phase 1 makes it readable (one-line change) so `qol_settings.json` lands in the same folder.
-- `settings.json` holds `SettingsData`; QoL keeps its own `qol_settings.json` / `qol_secrets.json` next to it to avoid touching `SettingsData`.
+- `Assets/MATE ENGINE - Scripts/Settings/SaveLoadHandler.cs`: `BaseDir` (line 17) is `persistentDataPath`, or `persistentDataPath/<--datadir>` for extra instances. The fork adds `public static DataDirectory` (`// QoL:`) with the same value, valid after `Awake`.
+- `settings.json` holds `SettingsData`; the fork keeps its own files instead of touching `SettingsData`:
+  - `qol_settings.json` in `DataDirectory` (per instance): chat provider, preset, base URL, model, history length. Written with defaults on first use.
+  - `qol_secrets.json` in `persistentDataPath` (shared by all instances): API keys, DPAPI-encrypted for the Windows user (`Bridge/DpapiSecretProtector.cs`). `MEQOL_CHAT_API_KEY` / `MEQOL_TTS_API_KEY` / `MEQOL_STT_API_KEY` override it.
+- `Bridge/QolServices.cs` owns the store, settings and `ProviderRegistry`; it initializes lazily on first use.
+
+## Settings UI
+
+- `Bridge/QolAiSettingsPage.cs` builds the **AI PROVIDERS** page at `AfterSceneLoad` by cloning upstream widgets, without scene edits: the `Color Menu` page (layout overridden), the AI section's `Context Length` dropdown, `AiSystemPrompt` input field and labels, and the page's `Back` button. A **PROVIDERS** button is added to the right of the `= AI` section header.
+- Clones are stripped of upstream behaviour (`Rewire`: inspector events, `LocalizeStringEvent`, `ButtonLinker`, `UiTooltip`) and keep the template's on-screen scale. Upstream authors some widgets ~4x and scales them down; the scale is computed by multiplying local scales up to `SettingsMenuCanvas`, because the canvas is inactive (scale 0) when the page is built.
+- If upstream renames any of those objects, the page logs `[QoL] AI providers page not installed: UI element not found: <path>` and the rest of the app is unaffected.
+- Strings come from the fork's own **`QoL` string table** (`Assets/MateEngineQoL/Localization`) via `QolText.Get`, falling back to English. Edit the English source in `Bridge/Editor/QolLocalizationSetup.cs`, then run **MateEngine → QoL → Update QoL String Table**. A separate collection keeps upstream's `Languages (UI)` tables untouched; creating it added the tables to the `Localization-String-Tables-*` Addressables groups.
 
 ## Avatar loading
 
@@ -85,6 +97,12 @@ Do not commit these; they are environment noise, not changes.
 - **Every Editor open:** `Assets/AddressableAssetsData/link.xml` (+ `.meta`) gets deleted. Addressables generates it during builds and removes it afterwards; upstream committed a stale copy.
 - **Poiyomi/Thry:** writes a `Thry/` cache folder at the repo root (gitignored).
 - `ProjectSettings/ProjectSettings.asset` and `UserSettings/` can show line-ending-only diffs.
+- **Play mode:** `ThemeManager` tints the shared `Assets/MATE ENGINE - Scripts/ThemeManager/*.mat` materials at runtime, so they show as modified after playing in the Editor.
+- `unity command capture_game_view --save_path Temp/x.png` actually writes to `Assets/Temp/x.png`; delete it afterwards.
+
+## Testing in the live Editor
+
+With the Editor open via `unity open .`: `unity command editor_play`, then `unity command eval_file --file <script.cs>` to drive the app (e.g. open `SettingsMenuCanvas`, invoke buttons, call `QolChatRouter.Send`), and `unity command capture_game_view` for screenshots. For remote-provider tests without a real API, run a fake OpenAI-compatible SSE server bound to `127.0.0.1` and point a Custom provider at it. Back up the fork's `ZomeAI.json` first; remote replies are saved to chat history.
 
 ## Linux port (later)
 
