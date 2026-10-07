@@ -108,7 +108,7 @@ public class AvatarMinecraftMessages : MonoBehaviour
     {
         try
         {
-            client = new UdpClient(port);
+            client = new UdpClient(new IPEndPoint(IPAddress.Loopback, port)); // QoL: localhost only; was all interfaces (LAN-reachable)
             client.Client.ReceiveTimeout = 1000;
             run = true;
             thread = new Thread(Listen) { IsBackground = true };
@@ -146,7 +146,7 @@ public class AvatarMinecraftMessages : MonoBehaviour
                 if (client == null) { Thread.Sleep(50); continue; }
                 var data = client.Receive(ref ep);
                 var s = Encoding.UTF8.GetString(data);
-                queue.Enqueue(s);
+                if (queue.Count < 256) queue.Enqueue(s); // QoL: cap backlog so a packet flood can't grow memory
             }
             catch (SocketException) { }
             catch { }

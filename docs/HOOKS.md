@@ -8,8 +8,8 @@ Rule: QoL code lives in `Assets/MateEngineQoL/`. Edits to upstream files stay at
 
 | Folder | Assembly | May reference |
 | --- | --- | --- |
-| `Assets/MateEngineQoL/Core/` | `MateEngineQoL.Core` (asmdef, auto-referenced) | Unity, precompiled DLLs (Newtonsoft). No upstream types. |
-| `Assets/MateEngineQoL/Core.Tests/` | `MateEngineQoL.Core.Tests` (Editor only) | Core, NUnit |
+| `Assets/MateEngineQoL/Core/` | `MateEngineQoL.Core` (asmdef, auto-referenced, `noEngineReferences`) | .NET and precompiled DLLs (Newtonsoft). No `UnityEngine`, no upstream types. |
+| `Assets/MateEngineQoL/Core.Tests/` | `MateEngineQoL.Core.Tests` (Editor only) | Core, NUnit. Also built by `Tools/CoreTests` for `dotnet test`. |
 | `Assets/MateEngineQoL/Bridge/` | Assembly-CSharp (no asmdef) | Core and all upstream code |
 | `Assets/MateEngineQoL/Bridge/Editor/` | Assembly-CSharp-Editor | as above, plus `UnityEditor` |
 
@@ -67,7 +67,9 @@ An asmdef cannot reference Assembly-CSharp, which is why anything touching `Chat
 - Mono backend, .NET Framework API level, Windows x64.
 - Upstream ships `EditorBuildSettings` with no scenes. **MateEngine → QoL → Add Main Scene To Build** adds `Mate Engine Main.unity`; **Build Windows Player** calls it first.
 - CLI build: `Unity.exe -batchmode -quit -projectPath . -executeMethod MateEngineQoL.Build.QolBuild.BuildWindows` (optional `-qolBuildOutput <path>`, default `Builds/Windows/MateEngineX.exe`).
-- Core tests: Editor **Window → General → Test Runner → EditMode**. The batchmode `-runTests` route hung in pre-build setup on 2026-10-06; prefer the Editor.
+- **Core tests: `dotnet test Tools/CoreTests`** (seconds, no Unity needed). Core's asmdef has `noEngineReferences: true`, so it stays plain C# and the same sources build under .NET 8 at C# 9 (Unity 6's language version). Keep Core engine-free; anything needing `UnityEngine` belongs in Bridge.
+- Unity's own test runner hangs in this project: `Unity.PerformanceTesting.Editor.TestRunBuilder` (`IPrebuildSetup`, from `com.unity.test-framework.performance`) blocks the main thread on every run, whether batchmode `-runTests`, `unity test`, or `unity command run_tests` in a live Editor. The `Core.Tests` asmdef stays so the tests also show in Unity's Test Runner window, but don't rely on it.
+- **Unity CLI** (`unity`, installed at `%LOCALAPPDATA%\Unity\bin`): the project has `com.unity.pipeline` installed, so `unity open .` starts an Editor that the CLI can drive (`unity status`, `unity command <name>`, `unity recompile`, `unity list`). Its server listens on `127.0.0.1` only. `unity test` / `unity build` / `-executeMethod` need the Editor closed.
 - `Assets/Editor/PostBuildCopy.cs` copies `steam_api64.dll` and `steam_appid.txt` next to the exe.
 - Batchmode fails if the project is open in the Editor.
 

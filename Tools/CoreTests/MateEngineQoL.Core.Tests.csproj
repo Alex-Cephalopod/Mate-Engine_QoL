@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Runs the MateEngineQoL.Core EditMode tests with plain .NET, outside Unity.
+    Core is engine-free (noEngineReferences), so the same sources compile here.
+    LangVersion matches Unity 6's C# 9 so newer syntax doesn't slip in.
+    Usage (repo root): dotnet test Tools/CoreTests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/MateEngineQoL/Core/**/*.cs" />
+    <Compile Include="../../Assets/MateEngineQoL/Core.Tests/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- NUnit 3.x to match the classic Assert API Unity's test framework exposes. -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+</Project>

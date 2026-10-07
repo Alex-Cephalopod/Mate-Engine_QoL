@@ -84,3 +84,14 @@ CLAUDE.local.md
 
 # Poiyomi/Thry editor cache
 Thry/
+
+# dotnet build output for Tools/ projects
+Tools/**/[Bb]in/
+Tools/**/[Oo]bj/
+!Tools/**/*.csproj
+
+# Build-generated files (Addressables link.xml, LLMUnity model manifest)
+Assets/AddressableAssetsData/link.xml
+Assets/AddressableAssetsData/link.xml.meta
+Assets/StreamingAssets/LLMManager.json
+Assets/StreamingAssets/LLMManager.json.meta

@@ -15,6 +15,18 @@ namespace MateEngineQoL.Build
         const string MainScene = "Assets/MATE ENGINE - Scenes/Mate Engine Main.unity";
         const string DefaultOutput = "Builds/Windows/MateEngineX.exe";
 
+        /// <summary>
+        /// One-time setup for a fresh clone: reimport VRMs and register the main scene.
+        /// Batchmode: Unity.exe -batchmode -quit -projectPath . -executeMethod MateEngineQoL.Build.QolBuild.PrepareProject
+        /// </summary>
+        [MenuItem("MateEngine/QoL/Prepare Fresh Clone")]
+        public static void PrepareProject()
+        {
+            ReimportVrmAssets();
+            EnsureMainSceneInBuild();
+            AssetDatabase.SaveAssets();
+        }
+
         [MenuItem("MateEngine/QoL/Add Main Scene To Build")]
         public static void EnsureMainSceneInBuild()
         {

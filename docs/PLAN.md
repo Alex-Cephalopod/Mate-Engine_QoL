@@ -6,7 +6,7 @@ The plan lives in a shared doc and is the source of truth for scope, architectur
 - **Fork Plan** tab: goals, the six features, settings design, risks, references.
 - **Phase plan** tab: Phase 0 findings, accepted plan changes, build order, and a checklist per phase with the files each task touches.
 
-Tick checkboxes in the doc, not here. Code-level hook points are in [HOOKS.md](HOOKS.md).
+Tick checkboxes in the doc, not here. Code-level hook points are in [HOOKS.md](HOOKS.md). Security rules every phase follows are in [SECURITY.md](SECURITY.md).
 
 ## Features
 
