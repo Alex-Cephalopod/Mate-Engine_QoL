@@ -85,9 +85,8 @@ public class AISystemPromptBinder : MonoBehaviour
 
     static string GetFixedPromptPath()
     {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var localLow = Path.GetFullPath(Path.Combine(localAppData, @"..\LocalLow"));
-        var dir = Path.Combine(localLow, "Shinymoon", "MateEngineX");
-        return Path.Combine(dir, "ZomeAI_prompt.txt");
+        // QoL: was a hardcoded LocalLow\Shinymoon\MateEngineX path, which kept sharing the prompt with the
+        // Steam install after the fork got its own data folder (and only worked on Windows).
+        return Path.Combine(Application.persistentDataPath, "ZomeAI_prompt.txt");
     }
 }

@@ -29,7 +29,7 @@ An asmdef cannot reference Assembly-CSharp, which is why anything touching `Chat
 ## System prompt
 
 - `Assets/MATE ENGINE - Scripts/AvatarHandlers/AISystemPromptBinder.cs` reads and writes the prompt file and pushes it into `LLMCharacter.prompt` (`ApplyToLLM`).
-- `GetFixedPromptPath()` (line 86) is hardcoded to `%LOCALAPPDATA%\..\LocalLow\Shinymoon\MateEngineX\ZomeAI_prompt.txt`. It ignores `--datadir` and is Windows-only. Character profiles (Phase 7) must write the same prompt; the Linux port will need to fix this path.
+- `GetFixedPromptPath()` (line 86) was hardcoded to `%LOCALAPPDATA%\..\LocalLow\Shinymoon\MateEngineX\ZomeAI_prompt.txt`; the fork changed it (`// QoL:`) to `Application.persistentDataPath/ZomeAI_prompt.txt`. It still ignores `--datadir`, so all instances share one prompt. This prompt is the "character block"; Phase 7a seeds the `default` character from it.
 
 ## Talking state
 
@@ -38,6 +38,10 @@ An asmdef cannot reference Assembly-CSharp, which is why anything touching `Chat
 - `ChatBot.streamAudioSource` plays a gibberish voice loop while a reply streams (line 267) and fades out in `FadeOutStreamAudio`.
 
 ## Settings and data paths
+
+- **The fork has its own data folder.** `productName` is `MateEngineQoL` (upstream: `MateEngineX`), so `persistentDataPath` is `LocalLow\Shinymoon\MateEngineQoL` and the Steam install's `LocalLow\Shinymoon\MateEngineX` is never written. The exe keeps the name `MateEngineX.exe` because `LaunchMateEngineInstance.executableName` looks for it.
+- **First-run import:** `Bridge/SteamDataImporter.cs` runs at `BeforeSceneLoad`. If the fork folder has no `settings.json` and no `qol_import.json`, it copies the Steam folder in (`Core/Import/DataFolderImport.cs`): read-only on the source, never overwrites, skips `Player*.log`, `SteamDRM.token`, `ZomeAI.cache`, rewrites absolute paths inside `.json` files, records the result in `qol_import.json`. Re-run without overwriting via **MateEngine → QoL → Import Steam Data**; to redo it from scratch, delete the fork folder.
+- `PlayerPrefs` (registry, keyed by company/product) is not imported: FPS limit, a legacy model-path key, blendshape preset paths, LLMUnity debug flags.
 
 - `Assets/MATE ENGINE - Scripts/Settings/SaveLoadHandler.cs`: `BaseDir` (line 17) is `persistentDataPath`, or `persistentDataPath/<--datadir>` for extra instances. It is a **private** property; Phase 1 makes it readable (one-line change) so `qol_settings.json` lands in the same folder.
 - `settings.json` holds `SettingsData`; QoL keeps its own `qol_settings.json` / `qol_secrets.json` next to it to avoid touching `SettingsData`.
@@ -84,4 +88,4 @@ Do not commit these; they are environment noise, not changes.
 
 ## Linux port (later)
 
-Keep new platform code behind `#if UNITY_STANDALONE_WIN` with a stub `#else`. Known Windows-only spots to revisit: `AISystemPromptBinder.GetFixedPromptPath`, `WinApi`/`DwmApi`, push-to-talk hotkey.
+Keep new platform code behind `#if UNITY_STANDALONE_WIN` with a stub `#else`. Known Windows-only spots to revisit: `WinApi`/`DwmApi`, push-to-talk hotkey. (`AISystemPromptBinder.GetFixedPromptPath` is fixed.) The Steam import finds the Steam folder as a sibling under the company folder, which also works for `~/.config/unity3d/Shinymoon/` on Linux.
