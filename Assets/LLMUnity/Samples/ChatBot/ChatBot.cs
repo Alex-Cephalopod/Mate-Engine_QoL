@@ -246,7 +246,20 @@ namespace LLMUnitySamples
             {
                 AddBubble(llmCharacter.chat[i].content, i % 2 == 1);
             }
+            // QoL: an empty session shows the character's greeting (display only, not sent to the model)
+            string qolGreeting = MateEngineQoL.Bridge.CharacterManager.ActiveGreeting;
+            if (total <= 1 && !string.IsNullOrWhiteSpace(qolGreeting)) AddBubble(qolGreeting, false);
             StartCoroutine(ScrollToBottomNextFrame());
+        }
+
+        // QoL: re-render llmCharacter.chat after a character switch or a new session
+        public void QolReloadMessages()
+        {
+            if (inputBubble == null) return; // Start hasn't run yet and will render the chat itself
+            foreach (Bubble bubble in chatBubbles) bubble.Destroy();
+            chatBubbles.Clear();
+            ShowLoadedMessages();
+            layoutDirty = true;
         }
 
         void onInputFieldSubmit(string newText)

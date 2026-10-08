@@ -24,6 +24,13 @@ public class DeleteAIHistory : MonoBehaviour
 
     public void DeleteHistoryFiles()
     {
+        // QoL: chat history lives in the active character's session logs
+        if (MateEngineQoL.Bridge.CharacterManager.IsReady)
+        {
+            MateEngineQoL.Bridge.CharacterManager.Instance.DeleteHistory();
+            return;
+        }
+
         string jsonPath = Path.Combine(Application.persistentDataPath, fileName + ".json");
         string cachePath = Path.Combine(Application.persistentDataPath, fileName + ".cache");
 

@@ -37,11 +37,15 @@ public class AISystemPromptBinder : MonoBehaviour
         }
         catch (Exception e) { Debug.LogError("[AI Prompt] Read/Create failed: " + e); }
 
+        // QoL: with characters loaded, this box shows and edits the active character's prompt
+        bool qolCharacter = MateEngineQoL.Bridge.CharacterManager.TryGetActivePrompt(out string qolPrompt);
+        if (qolCharacter) txt = qolPrompt;
+
         input.onValueChanged.RemoveListener(OnValueChanged);
         input.onEndEdit.RemoveListener(OnEndEdit);
 
         input.text = txt;
-        ApplyToLLM(txt);
+        if (!qolCharacter) ApplyToLLM(txt);
 
         input.onValueChanged.AddListener(OnValueChanged);
         input.onEndEdit.AddListener(OnEndEdit);
@@ -68,6 +72,7 @@ public class AISystemPromptBinder : MonoBehaviour
 
     void Save(string s)
     {
+        if (MateEngineQoL.Bridge.CharacterManager.TrySetActivePrompt(s)) return; // QoL: saved to the active character, chat kept
         string path = GetFixedPromptPath();
         try
         {

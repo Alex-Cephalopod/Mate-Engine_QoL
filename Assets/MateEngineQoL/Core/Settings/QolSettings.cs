@@ -11,6 +11,29 @@ namespace MateEngineQoL.Settings
     {
         public int Version = 1;
         public ChatSettings Chat = new ChatSettings();
+        public CharacterSettings Characters = new CharacterSettings();
+        public ContextSettings Context = new ContextSettings();
+    }
+
+    public sealed class CharacterSettings
+    {
+        /// <summary>Folder name under Characters/ of the character to load on start.</summary>
+        public string ActiveId = "default";
+    }
+
+    /// <summary>
+    /// Token budgets for what is sent with each message (see ContextBuilder). Estimated tokens, not exact.
+    /// For the built-in model the total is also capped by its context size.
+    /// </summary>
+    public sealed class ContextSettings
+    {
+        public int TotalTokens = 8192;
+        /// <summary>Left free for the reply.</summary>
+        public int ReplyReserveTokens = 1024;
+        public int FactsTokens = 512;
+        public int SummaryTokens = 1024;
+        /// <summary>Most earlier messages (user + AI) sent with each request, within the token budget.</summary>
+        public int MaxHistoryMessages = 20;
     }
 
     public sealed class ChatSettings
@@ -23,8 +46,6 @@ namespace MateEngineQoL.Settings
         public string Model = "";
         public float? Temperature;
         public int? MaxTokens;
-        /// <summary>How many earlier messages (user + AI) are sent with each request.</summary>
-        public int HistoryMessages = 20;
     }
 
     public static class ChatProviderIds

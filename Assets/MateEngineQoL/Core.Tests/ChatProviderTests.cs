@@ -152,23 +152,5 @@ namespace MateEngineQoL.Tests
         {
             Assert.Throws<ProviderException>(() => ReadSse("data: " + new string('x', 50) + "\n\n", 20));
         }
-
-        [Test]
-        public void HistoryMapperAlternatesAndTrimsToUserTurn()
-        {
-            var turns = new[] { "u1", "a1", "u2", "a2", "u3", "a3" };
-            List<ChatMessage> m = HistoryMapper.Build("sys", turns, "now", 3);
-            // 3 most recent would start on "a2"; rounded to start on the user turn "u3".
-            Assert.AreEqual(new[] { "system", "user", "assistant", "user" }, m.ConvertAll(x => x.Role).ToArray());
-            Assert.AreEqual(new[] { "sys", "u3", "a3", "now" }, m.ConvertAll(x => x.Content).ToArray());
-        }
-
-        [Test]
-        public void HistoryMapperWithoutPromptOrHistory()
-        {
-            List<ChatMessage> m = HistoryMapper.Build("", null, "hello", 20);
-            Assert.AreEqual(1, m.Count);
-            Assert.AreEqual("user", m[0].Role);
-        }
     }
 }

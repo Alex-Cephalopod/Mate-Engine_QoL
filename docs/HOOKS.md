@@ -23,15 +23,25 @@ An asmdef cannot reference Assembly-CSharp, which is why anything touching `Chat
   - `WarmUpCallback()` (line 303) unblocks input after the local model warms up; `Start()` calls `llmCharacter.Warmup`.
   - `ShowLoadedMessages()` (line 237) renders `llmCharacter.chat` as bubbles.
 - **Local LLM:** LLMUnity 2.5.1. Scene `LLMCharacter` has `save: ZomeAI`, `saveCache: 1`, `remote: 0`. Useful API: `AddPlayerMessage`, `AddAIMessage`, `AddMessage(role, content)`, `Save(filename)`, `Load(filename)`, `ClearChat`, `SetPrompt(prompt, clearChat)`.
-- **Fork hooks (`// QoL:`):** `onInputFieldSubmit` calls `QolChatRouter.Send(llmCharacter, ...)` instead of `llmCharacter.Chat(...)`; `CancelRequests` also calls `QolChatRouter.Cancel()`; `Start` calls `WarmUpCallback()` immediately when a remote provider is active so input isn't blocked on the local model.
-- **Router (`Bridge/QolChatRouter.cs`):** with provider `upstream-local` it calls `LLMCharacter.Chat` unchanged. Otherwise it builds the request from `llmCharacter.prompt` + `llmCharacter.chat` (roles by position, `HistoryMessages` most recent), streams from the provider, then `AddPlayerMessage`/`AddAIMessage` and writes the history JSON in upstream's `ChatListWrapper` format (skipping the KV-cache step, which needs the local model). Errors show in the AI bubble as `[!] ...` and are not saved. `ReplyDelta`/`ReplyCompleted` events fire for both paths (voice pipeline hook).
+- **Fork hooks (`// QoL:`):** `onInputFieldSubmit` calls `QolChatRouter.Send(llmCharacter, ...)` instead of `llmCharacter.Chat(...)`; `CancelRequests` also calls `QolChatRouter.Cancel()`; `Start` calls `WarmUpCallback()` immediately when a remote provider is active so input isn't blocked on the local model. `QolReloadMessages()` re-renders the bubbles after a character switch; `ShowLoadedMessages` adds the character's greeting bubble to an empty session. `Bubble.GetText`/`SetText` tolerate a destroyed bubble, since a switch can destroy bubbles while a cancelled reply still calls back.
+- **Router (`Bridge/QolChatRouter.cs`):** `/char <name>`, `/chars` and `/new` are handled here and never reach a model (`Core/Characters/ChatCommand.cs`; any other text starting with `/` is sent as usual). With provider `upstream-local` it loads the budgeted context into `llmCharacter.chat` and calls `LLMCharacter.Chat`. Otherwise it sends the budgeted context to the provider, then `AddPlayerMessage`/`AddAIMessage`. Finished exchanges go to `CharacterManager.RecordExchange`; a reply that started before a switch or `/new` (checked with `CharacterManager.Generation`) is dropped. Errors show in the AI bubble as `[!] ...` and are not saved. `ReplyDelta`/`ReplyCompleted` events fire for both paths (voice pipeline hook). If characters failed to load, it falls back to `llmCharacter.prompt` + `llmCharacter.chat` and upstream's `ZomeAI.json` save.
+- **Context (`Core/AI/ContextBuilder.cs`):** system message = prompt + facts + summary (facts and summary are empty until Phase 8b), then the newest whole user/assistant pairs that fit `qol_settings.json` → `Context` (`TotalTokens` minus `ReplyReserveTokens`, at most `MaxHistoryMessages`). Tokens are estimated at 4 characters each. For the built-in model the total is also capped by `LLM.contextSize`. The prompt is never trimmed; if it alone is over budget, no history is sent and a warning is logged.
 - **Context size:** `SettingsHandlerDropdowns` sets `LLM.contextSize`.
 - **Model files are gitignored** (`Assets/StreamingAssets/undreamai-*-llamacpp`, `*.gguf`). A fresh clone has no local model.
 
-## System prompt
+## System prompt and characters
 
-- `Assets/MATE ENGINE - Scripts/AvatarHandlers/AISystemPromptBinder.cs` reads and writes the prompt file and pushes it into `LLMCharacter.prompt` (`ApplyToLLM`).
-- `GetFixedPromptPath()` (line 86) was hardcoded to `%LOCALAPPDATA%\..\LocalLow\Shinymoon\MateEngineX\ZomeAI_prompt.txt`; the fork changed it (`// QoL:`) to `Application.persistentDataPath/ZomeAI_prompt.txt`. It still ignores `--datadir`, so all instances share one prompt. This prompt is the "character block"; Phase 7a seeds the `default` character from it.
+- `Assets/MATE ENGINE - Scripts/AvatarHandlers/AISystemPromptBinder.cs` reads and writes the prompt file and pushes it into `LLMCharacter.prompt` (`ApplyToLLM`). Upstream's `ApplyToLLM` calls `SetPrompt(s, true)`, which clears the in-memory chat on every keystroke.
+- `GetFixedPromptPath()` (line 86) was hardcoded to `%LOCALAPPDATA%\..\LocalLow\Shinymoon\MateEngineX\ZomeAI_prompt.txt`; the fork changed it (`// QoL:`) to `Application.persistentDataPath/ZomeAI_prompt.txt`. It still ignores `--datadir`, so all instances share one prompt file.
+- `LLMCharacter.Start` (upstream edit in vendored LLMUnity) also reads `ZomeAI_prompt.txt` into `chat[0]`.
+- **Characters (Phase 7a/8a):** `Bridge/CharacterManager.cs` owns the active character. Files: `<DataDirectory>/Characters/<id>/character.json` (name, prompt, greeting) and `Characters/<id>/sessions/<yyyyMMdd-HHmmss>.jsonl` (one message per line, appended as each exchange finishes). The newest session is resumed on launch; `ActiveId` in `qol_settings.json` picks the character. Characters are per instance (`--datadir`).
+  - First run: if `Characters/` has no character, `default` is created from `ZomeAI_prompt.txt` (name from its `Name:` line) and `ZomeAI.json` is imported as its first session. Upstream files are only read.
+  - `LLMCharacter.save` is set to `""`: the session log replaces `ZomeAI.json` and the KV cache.
+  - It runs `Start` at `DefaultExecutionOrder(10000)`, after `LLMCharacter.Start` and `ChatBot.Start`.
+  - `LLMCharacter` sits in the chat window, which may first open after startup; its `Awake`/`Start` would then clear the chat and load the prompt file. LLMUnity Runtime is its own asmdef and can't reference Bridge, so `LLMCharacter` got a static hook, `QolLoadCharacter` (`// QoL:`), called at the end of `Awake` and the start of `Start`; `CharacterManager` sets it and reloads the active character there.
+  - Hooks (`// QoL:`): `AISystemPromptBinder.Awake` shows the active character's prompt and `Save` writes it to `character.json` with `SetPrompt(s, false)`, so the chat is kept. `DeleteAIHistory.DeleteHistoryFiles` deletes the active character's sessions.
+  - `LLMCharacter.CancelRequests` (and upstream's `ChatBot.CancelRequests`) throws when no local model is running; `CharacterManager` wraps it.
+  - UI: CHARACTERS section on the AI PROVIDERS page (pick or add, name, greeting, NEW CHAT). No delete or duplicate yet (7b); remove a character by deleting its folder.
 
 ## Talking state
 
@@ -47,7 +57,8 @@ An asmdef cannot reference Assembly-CSharp, which is why anything touching `Chat
 
 - `Assets/MATE ENGINE - Scripts/Settings/SaveLoadHandler.cs`: `BaseDir` (line 17) is `persistentDataPath`, or `persistentDataPath/<--datadir>` for extra instances. The fork adds `public static DataDirectory` (`// QoL:`) with the same value, valid after `Awake`.
 - `settings.json` holds `SettingsData`; the fork keeps its own files instead of touching `SettingsData`:
-  - `qol_settings.json` in `DataDirectory` (per instance): chat provider, preset, base URL, model, history length. Written with defaults on first use.
+  - `qol_settings.json` in `DataDirectory` (per instance): chat provider, preset, base URL, model; active character; context budgets. Written with defaults on first use.
+  - `Characters/` in `DataDirectory` (per instance): see System prompt and characters.
   - `qol_secrets.json` in `persistentDataPath` (shared by all instances): API keys, DPAPI-encrypted for the Windows user (`Bridge/DpapiSecretProtector.cs`). `MEQOL_CHAT_API_KEY` / `MEQOL_TTS_API_KEY` / `MEQOL_STT_API_KEY` override it.
 - `Bridge/QolServices.cs` owns the store, settings and `ProviderRegistry`; it initializes lazily on first use.
 

@@ -148,11 +148,13 @@ namespace LLMUnitySamples
 
         public string GetText()
         {
+            if (bubbleObject == null) return ""; // QoL: bubbles are destroyed on a character switch while a reply may still be streaming
             return bubbleObject.GetComponent<Text>().text;
         }
 
         public void SetText(string text)
         {
+            if (bubbleObject == null) return; // QoL: see GetText
             bubbleObject.GetComponent<Text>().text = text;
         }
 

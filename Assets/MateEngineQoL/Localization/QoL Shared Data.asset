@@ -119,6 +119,50 @@ MonoBehaviour:
     m_Key: QOL_HINT_CUSTOM
     m_Metadata:
       m_Items: []
+  - m_Id: 326419102019584
+    m_Key: QOL_CHARACTERS_TITLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962624
+    m_Key: QOL_CHARACTER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962625
+    m_Key: QOL_CHARACTER_NEW
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962626
+    m_Key: QOL_CHARACTER_NEW_NAME
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962627
+    m_Key: QOL_CHARACTER_NAME
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962628
+    m_Key: QOL_GREETING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962629
+    m_Key: QOL_GREETING_HINT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962630
+    m_Key: QOL_NEW_CHAT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962631
+    m_Key: QOL_CHARACTER_NOTE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962632
+    m_Key: QOL_CMD_NO_CHARACTER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962633
+    m_Key: QOL_CMD_CHARACTERS
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

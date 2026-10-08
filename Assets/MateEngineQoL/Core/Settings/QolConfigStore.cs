@@ -62,6 +62,8 @@ namespace MateEngineQoL.Settings
             {
                 QolSettings s = JsonConvert.DeserializeObject<QolSettings>(File.ReadAllText(path), JsonSettings) ?? new QolSettings();
                 if (s.Chat == null) s.Chat = new ChatSettings();
+                if (s.Characters == null) s.Characters = new CharacterSettings();
+                if (s.Context == null) s.Context = new ContextSettings();
                 return s;
             }
             catch (JsonException e)

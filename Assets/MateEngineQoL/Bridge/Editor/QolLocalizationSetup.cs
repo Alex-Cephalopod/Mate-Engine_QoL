@@ -46,6 +46,17 @@ namespace MateEngineQoL.Build
             ["QOL_STATUS_ERROR"] = "Not ready: {0}",
             ["QOL_STATUS_READY"] = "Ready: replies come from {0}.",
             ["QOL_NOTE_PRIVACY"] = "Your character prompt and chat history are sent to the server you choose. Local servers (Ollama, LM Studio) keep everything on this PC.",
+            ["QOL_CHARACTERS_TITLE"] = "CHARACTERS",
+            ["QOL_CHARACTER"] = "CHARACTER",
+            ["QOL_CHARACTER_NEW"] = "+ New character",
+            ["QOL_CHARACTER_NEW_NAME"] = "New character",
+            ["QOL_CHARACTER_NAME"] = "NAME",
+            ["QOL_GREETING"] = "GREETING",
+            ["QOL_GREETING_HINT"] = "Optional first message in a new chat (not sent to the model)",
+            ["QOL_NEW_CHAT"] = "NEW CHAT",
+            ["QOL_CHARACTER_NOTE"] = "Edit the character's prompt in the AI section's prompt box. In chat: /char <name> switches, /chars lists, /new starts a new chat.",
+            ["QOL_CMD_NO_CHARACTER"] = "No character called \"{0}\". Characters: {1}",
+            ["QOL_CMD_CHARACTERS"] = "Talking to {0}. Characters: {1}. Switch with /char <name>.",
         };
 
         [MenuItem("MateEngine/QoL/Update QoL String Table")]

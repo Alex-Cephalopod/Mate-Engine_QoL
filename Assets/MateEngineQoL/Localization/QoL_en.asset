@@ -124,6 +124,51 @@ MonoBehaviour:
     m_Localized: Any OpenAI-compatible server. https is required when a key is set.
     m_Metadata:
       m_Items: []
+  - m_Id: 326419102019584
+    m_Localized: CHARACTERS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962624
+    m_Localized: CHARACTER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962625
+    m_Localized: + New character
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962626
+    m_Localized: New character
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962627
+    m_Localized: NAME
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962628
+    m_Localized: GREETING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962629
+    m_Localized: Optional first message in a new chat (not sent to the model)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962630
+    m_Localized: NEW CHAT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962631
+    m_Localized: 'Edit the character''s prompt in the AI section''s prompt box. In
+      chat: /char <name> switches, /chars lists, /new starts a new chat.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962632
+    m_Localized: 'No character called "{0}". Characters: {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 326419143962633
+    m_Localized: 'Talking to {0}. Characters: {1}. Switch with /char <name>.'
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

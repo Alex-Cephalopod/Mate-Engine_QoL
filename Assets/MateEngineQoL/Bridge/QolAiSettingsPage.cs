@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using MateEngineQoL.AI;
+using MateEngineQoL.Characters;
 using MateEngineQoL.Settings;
 using TMPro;
 using UnityEngine;
@@ -16,7 +17,8 @@ namespace MateEngineQoL.Bridge
     /// <summary>
     /// The "AI PROVIDERS" page in the settings menu. Built at runtime by cloning upstream's own widgets
     /// (Color Menu page, context-length dropdown, system-prompt field) so it matches the menu without
-    /// editing the scene. A "PROVIDERS" button next to the AI section header opens it.
+    /// editing the scene. A "PROVIDERS" button next to the AI section header opens it. Below the provider
+    /// rows is the character section (pick, rename, greeting, new chat); the prompt itself stays in upstream's box.
     /// </summary>
     public sealed class QolAiSettingsPage : MonoBehaviour
     {
@@ -29,6 +31,11 @@ namespace MateEngineQoL.Bridge
         TMP_Text _status, _presetHint;
         readonly List<CanvasGroup> _remoteOnly = new List<CanvasGroup>();
         CancellationTokenSource _testCts;
+
+        TMP_Dropdown _character;
+        InputField _characterName, _greeting;
+        readonly List<string> _characterIds = new List<string>();
+        readonly List<CanvasGroup> _characterRows = new List<CanvasGroup>();
 
         // Index 0 is the built-in model; 1..N map to ChatPresets.All.
         static int PresetToIndex(ChatSettings s)
@@ -107,17 +114,7 @@ namespace MateEngineQoL.Bridge
 
             if (titleTemplate != null) AddText(content, titleTemplate, QolText.Get("QOL_AI_PROVIDERS_TITLE"), 60f);
 
-            // Provider dropdown, laid out like upstream's context-length row (label is a child on the left).
-            RectTransform dropdownRow = Row(content, 50f);
-            _provider = Clone(dropdownTemplate.gameObject, dropdownRow).GetComponent<TMP_Dropdown>();
-            var ddRect = (RectTransform)_provider.transform;
-            Vector2 nativeSize = ((RectTransform)dropdownTemplate.transform).rect.size; // the "Title" label sits left of it
-            ddRect.anchorMin = ddRect.anchorMax = ddRect.pivot = new Vector2(1f, 0.5f);
-            ddRect.anchoredPosition = Vector2.zero;
-            ddRect.sizeDelta = nativeSize;
-            _provider.onValueChanged = new TMP_Dropdown.DropdownEvent();
-            Transform ddTitle = _provider.transform.Find("Title");
-            if (ddTitle != null) SetText(ddTitle.gameObject, QolText.Get("QOL_CHAT_PROVIDER"));
+            _provider = AddDropdown(content, dropdownTemplate, "QOL_CHAT_PROVIDER");
             _provider.ClearOptions();
             var options = new List<string> { QolText.Get("QOL_CHAT_PROVIDER_BUILTIN") };
             foreach (ChatPreset p in ChatPresets.All) options.Add(p.DisplayName);
@@ -139,6 +136,21 @@ namespace MateEngineQoL.Bridge
 
             _status = AddText(content, noteTemplate, "", 48f);
             AddText(content, noteTemplate, QolText.Get("QOL_NOTE_PRIVACY"), 40f);
+
+            // Characters (Phase 7a).
+            if (titleTemplate != null) AddText(content, titleTemplate, QolText.Get("QOL_CHARACTERS_TITLE"), 60f);
+            _character = AddDropdown(content, dropdownTemplate, "QOL_CHARACTER");
+            _characterRows.Add(_character.transform.parent.gameObject.AddComponent<CanvasGroup>());
+            _character.onValueChanged.AddListener(OnCharacterChanged);
+            _characterName = AddInput(content, inputTemplate, labelTemplate, "QOL_CHARACTER_NAME", false, _characterRows);
+            _characterName.characterLimit = 60;
+            _characterName.onEndEdit.AddListener(_ => SaveCharacterFields());
+            _greeting = AddInput(content, inputTemplate, labelTemplate, "QOL_GREETING", false, _characterRows);
+            SetPlaceholder(_greeting, QolText.Get("QOL_GREETING_HINT"));
+            _greeting.onEndEdit.AddListener(_ => SaveCharacterFields());
+            Button newChat = AddButton(content, buttonTemplate, "QOL_NEW_CHAT", () => CharacterManager.Instance?.StartNewSession());
+            _characterRows.Add(newChat.gameObject.AddComponent<CanvasGroup>());
+            AddText(content, noteTemplate, QolText.Get("QOL_CHARACTER_NOTE"), 40f);
         }
 
         // ---- page open/close -------------------------------------------------
@@ -190,6 +202,8 @@ namespace MateEngineQoL.Bridge
             _apiKey.interactable = remote && !fromEnv;
             _removeKey.interactable = remote && hasKey && !fromEnv;
 
+            RefreshCharacters();
+
             _presetHint.text = QolText.Get(!remote ? "QOL_HINT_BUILTIN"
                 : preset == null || preset.Id == "custom" ? "QOL_HINT_CUSTOM"
                 : preset.Free ? "QOL_HINT_FREE_LOCAL"
@@ -207,7 +221,54 @@ namespace MateEngineQoL.Bridge
             else _status.text = QolText.Format("QOL_STATUS_READY", HostOf(QolServices.Settings.Chat.BaseUrl));
         }
 
+        void RefreshCharacters()
+        {
+            bool ready = CharacterManager.IsReady;
+            foreach (CanvasGroup g in _characterRows)
+            {
+                g.interactable = ready;
+                g.alpha = ready ? 1f : 0.4f;
+            }
+            _characterIds.Clear();
+            var names = new List<string>();
+            int selected = 0;
+            if (ready)
+            {
+                foreach (CharacterProfile p in CharacterManager.Instance.All())
+                {
+                    if (p.Id == CharacterManager.Instance.Active.Id) selected = _characterIds.Count;
+                    _characterIds.Add(p.Id);
+                    names.Add(p.DisplayName);
+                }
+            }
+            names.Add(QolText.Get("QOL_CHARACTER_NEW"));
+            _character.ClearOptions();
+            _character.AddOptions(names);
+            _character.SetValueWithoutNotify(selected);
+            _character.RefreshShownValue();
+
+            CharacterProfile active = ready ? CharacterManager.Instance.Active : null;
+            _characterName.SetTextWithoutNotify(active?.Name ?? "");
+            _greeting.SetTextWithoutNotify(active?.Greeting ?? "");
+        }
+
         // ---- edits -------------------------------------------------------------
+
+        void OnCharacterChanged(int index)
+        {
+            CharacterManager characters = CharacterManager.Instance;
+            if (characters == null) return;
+            if (index >= _characterIds.Count) characters.CreateAndSwitch(QolText.Get("QOL_CHARACTER_NEW_NAME"));
+            else characters.Switch(_characterIds[index]);
+            RefreshCharacters();
+        }
+
+        void SaveCharacterFields()
+        {
+            if (!CharacterManager.IsReady) return;
+            CharacterManager.Instance.UpdateActive(name: _characterName.text.Trim(), greeting: _greeting.text.Trim());
+            RefreshCharacters();
+        }
 
         void OnProviderChanged(int index)
         {
@@ -387,7 +448,24 @@ namespace MateEngineQoL.Bridge
             return label;
         }
 
-        InputField AddInput(Transform content, InputField template, TMP_Text labelTemplate, string labelKey, bool secret)
+        /// <summary>A dropdown laid out like upstream's context-length row (its "Title" label sits on the left).</summary>
+        TMP_Dropdown AddDropdown(Transform content, TMP_Dropdown template, string titleKey)
+        {
+            RectTransform row = Row(content, 50f);
+            var dropdown = Clone(template.gameObject, row).GetComponent<TMP_Dropdown>();
+            var rect = (RectTransform)dropdown.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = ((RectTransform)template.transform).rect.size;
+            dropdown.onValueChanged = new TMP_Dropdown.DropdownEvent();
+            Transform title = dropdown.transform.Find("Title");
+            if (title != null) SetText(title.gameObject, QolText.Get(titleKey));
+            return dropdown;
+        }
+
+        /// <param name="group">Rows to grey out together; defaults to the remote-provider rows.</param>
+        InputField AddInput(Transform content, InputField template, TMP_Text labelTemplate, string labelKey, bool secret,
+            List<CanvasGroup> group = null)
         {
             const float labelHeight = 22f, fieldHeight = 34f;
             RectTransform row = Row(content, labelHeight + fieldHeight + 4f);
@@ -420,8 +498,7 @@ namespace MateEngineQoL.Bridge
             field.characterLimit = secret ? 512 : 300;
             field.SetTextWithoutNotify("");
 
-            var group = row.gameObject.AddComponent<CanvasGroup>();
-            _remoteOnly.Add(group);
+            (group ?? _remoteOnly).Add(row.gameObject.AddComponent<CanvasGroup>());
             return field;
         }
 

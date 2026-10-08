@@ -127,6 +127,13 @@ namespace LLMUnity
         /// <summary> the chat history as list of chat messages </summary>
         [Tooltip("the chat history as list of chat messages")]
         public List<ChatMessage> chat = new List<ChatMessage>();
+
+        /// <summary>
+        /// QoL: set by the fork (MateEngineQoL.Bridge.CharacterManager), which owns the prompt and history. Called at the
+        /// end of Awake and at the start of Start; returns true when it loaded them, so upstream's prompt file is skipped.
+        /// A hook because this assembly can't reference the fork's code.
+        /// </summary>
+        public static System.Func<LLMCharacter, bool> QolLoadCharacter;
         /// <summary> the grammar to use </summary>
         [Tooltip("the grammar to use")]
         public string grammarString;
@@ -160,6 +167,7 @@ namespace LLMUnity
             }
             InitGrammar();
             InitHistory();
+            QolLoadCharacter?.Invoke(this); // QoL: may start late (inside the chat window); reload the active character
         }
         /*
         void Start()
@@ -183,6 +191,7 @@ namespace LLMUnity
 
         void Start()
         {
+            if (QolLoadCharacter != null && QolLoadCharacter(this)) return; // QoL: the active character's prompt replaces the file
             string promptPath = Path.Combine(Application.persistentDataPath, "ZomeAI_prompt.txt");
             string finalPrompt = this.prompt;
 
