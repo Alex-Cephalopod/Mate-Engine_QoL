@@ -51,7 +51,7 @@ namespace MateEngineQoL.AI.Http
                 string detail = await ReadErrorAsync(response).ConfigureAwait(false);
                 int code = (int)response.StatusCode;
                 string hint = code == 401 || code == 403 ? " Check the API key."
-                    : code == 402 ? " The account has no credit left."
+                    : code == 402 ? " The account has no API credit left (a free model, if the provider has one, avoids this)."
                     : code == 404 ? " Check the base URL and model name."
                     : "";
                 throw new ProviderException(baseUri.Host + " returned " + code + " " + response.ReasonPhrase + ": " + detail + hint, code);

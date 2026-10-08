@@ -111,7 +111,7 @@ namespace MateEngineQoL.Settings
         {
             new TtsPreset("kokoro", "Kokoro (local)", TtsProviderIds.OpenAICompatible, "http://localhost:8880/v1", "kokoro", "af_heart", false, true),
             new TtsPreset("openai", "OpenAI", TtsProviderIds.OpenAICompatible, "https://api.openai.com/v1", "gpt-4o-mini-tts", "alloy", true, false),
-            new TtsPreset("fish", "Fish Audio", TtsProviderIds.FishAudio, "https://api.fish.audio", "s1", "", true, false),
+            new TtsPreset("fish", "Fish Audio", TtsProviderIds.FishAudio, "https://api.fish.audio", "s2.1-pro-free", "", true, false),
             new TtsPreset("custom", "Custom", TtsProviderIds.OpenAICompatible, "", "", "", false, false),
         };
 

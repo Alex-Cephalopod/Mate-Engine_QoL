@@ -194,8 +194,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739077
-    m_Localized: Needs a Fish Audio key. Paid per use. VOICE takes a voice model
-      id from fish.audio.
+    m_Localized: Needs a Fish Audio key. Model s2.1-pro-free costs nothing; s1 and
+      s2.1-pro need prepaid API credit. VOICE takes a voice model id from fish.audio.
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739078
@@ -211,7 +211,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739081
-    m_Localized: e.g. kokoro, gpt-4o-mini-tts, or s1 for Fish
+    m_Localized: e.g. kokoro, gpt-4o-mini-tts, or s2.1-pro-free for Fish
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739082
