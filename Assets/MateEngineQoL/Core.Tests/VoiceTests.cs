@@ -253,7 +253,7 @@ namespace MateEngineQoL.Tests
 
             Assert.AreEqual(new[] { 0.5f, -0.5f }, Collect(tts.StreamSpeechAsync("Hi there.", Voice)));
             Assert.AreEqual(24000, tts.SampleRate);
-            Assert.AreEqual("http://localhost:8880/v1/audio/speech", handler.LastRequest.RequestUri.ToString());
+            Assert.AreEqual("http://127.0.0.1:8880/v1/audio/speech", handler.LastRequest.RequestUri.ToString());
             Assert.IsNull(handler.LastRequest.Headers.Authorization);
             JObject body = JObject.Parse(handler.LastBody);
             Assert.AreEqual("kokoro", (string)body["model"]);

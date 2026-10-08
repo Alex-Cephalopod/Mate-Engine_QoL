@@ -23,6 +23,11 @@ namespace MateEngineQoL.AI.Http
             if (uri.Scheme == Uri.UriSchemeHttp && sendsSecret && !uri.IsLoopback)
                 throw new ProviderException("Refusing to send an API key over plain http to " + uri.Host + ". Use https.");
 
+            // Unity's Mono resolves "localhost" to ::1 first and waits ~2 s before trying 127.0.0.1, on every request.
+            // Local servers (Ollama, LM Studio, Kokoro) listen on IPv4 only, so go there directly. IPv6-only: use [::1].
+            if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+                uri = new UriBuilder(uri) { Host = "127.0.0.1" }.Uri;
+
             string text = uri.GetLeftPart(UriPartial.Path);
             if (!text.EndsWith("/")) text += "/";
             return new Uri(text);

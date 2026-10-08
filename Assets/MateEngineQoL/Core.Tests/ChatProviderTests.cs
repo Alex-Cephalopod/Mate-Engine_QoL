@@ -55,7 +55,7 @@ namespace MateEngineQoL.Tests
             var provider = new OpenAICompatibleChatProvider(new HttpClient(handler), "http://localhost:11434/v1", null);
 
             Assert.AreEqual(new[] { "Hel", "lo", "!" }, Collect(provider.StreamReplyAsync(Request())));
-            Assert.AreEqual("http://localhost:11434/v1/chat/completions", handler.LastRequest.RequestUri.ToString());
+            Assert.AreEqual("http://127.0.0.1:11434/v1/chat/completions", handler.LastRequest.RequestUri.ToString());
             Assert.IsNull(handler.LastRequest.Headers.Authorization, "no key configured, no header expected");
 
             JObject body = JObject.Parse(handler.LastBody);
@@ -136,6 +136,15 @@ namespace MateEngineQoL.Tests
         {
             Assert.AreEqual("https://openrouter.ai/api/v1/", EndpointPolicy.ValidateBaseUrl("https://openrouter.ai/api/v1?x=1", true).ToString());
             Assert.AreEqual("https://openrouter.ai/api/v1/", EndpointPolicy.ValidateBaseUrl(" https://openrouter.ai/api/v1/ ", true).ToString());
+        }
+
+        [Test]
+        public void EndpointPolicySendsLocalhostToIpv4()
+        {
+            // Mono tries ::1 first and stalls ~2 s per request against IPv4-only local servers.
+            Assert.AreEqual("http://127.0.0.1:11434/v1/", EndpointPolicy.ValidateBaseUrl("http://LocalHost:11434/v1", false).ToString());
+            Assert.AreEqual("http://[::1]:8880/v1/", EndpointPolicy.ValidateBaseUrl("http://[::1]:8880/v1", false).ToString());
+            Assert.IsTrue(EndpointPolicy.ValidateBaseUrl("http://localhost:8880/v1", true).IsLoopback, "keys may still go to it over http");
         }
 
         static List<string> ReadSse(string text, int maxLine = 1000) =>
