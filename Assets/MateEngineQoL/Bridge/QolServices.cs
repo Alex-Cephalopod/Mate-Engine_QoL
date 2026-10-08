@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Threading;
 using MateEngineQoL.AI;
+using MateEngineQoL.AI.Fish;
 using MateEngineQoL.AI.OpenAI;
 using MateEngineQoL.Settings;
 using UnityEngine;
@@ -36,6 +37,10 @@ namespace MateEngineQoL.Bridge
             Registry = new ProviderRegistry();
             Registry.RegisterChat(ChatProviderIds.OpenAICompatible,
                 (s, key) => new OpenAICompatibleChatProvider(_http, s.BaseUrl, key));
+            Registry.RegisterTts(TtsProviderIds.OpenAICompatible,
+                (s, key) => new OpenAICompatibleTtsProvider(_http, s.BaseUrl, key));
+            Registry.RegisterTts(TtsProviderIds.FishAudio,
+                (s, key) => new FishAudioTtsProvider(_http, s.BaseUrl, key));
 
             Reload();
 
@@ -81,6 +86,8 @@ namespace MateEngineQoL.Bridge
             Registry.Rebuild(Settings, slot => Store.GetApiKey(_secrets, slot));
             if (Registry.ChatError != null) Debug.LogWarning("[QoL] Chat provider not ready: " + Registry.ChatError);
             else Debug.Log("[QoL] Chat provider: " + (Registry.Chat?.Id ?? ChatProviderIds.UpstreamLocal));
+            if (Registry.TtsError != null) Debug.LogWarning("[QoL] Voice provider not ready: " + Registry.TtsError);
+            else if (Registry.Tts != null) Debug.Log("[QoL] Voice provider: " + Registry.Tts.Id);
         }
     }
 }

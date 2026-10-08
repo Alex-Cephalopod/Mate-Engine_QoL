@@ -13,6 +13,7 @@ namespace MateEngineQoL.Settings
         public ChatSettings Chat = new ChatSettings();
         public CharacterSettings Characters = new CharacterSettings();
         public ContextSettings Context = new ContextSettings();
+        public TtsSettings Tts = new TtsSettings();
     }
 
     public sealed class CharacterSettings
@@ -52,6 +53,74 @@ namespace MateEngineQoL.Settings
     {
         public const string UpstreamLocal = "upstream-local";
         public const string OpenAICompatible = "openai-compatible";
+    }
+
+    /// <summary>Text-to-speech for replies (Phase 2). Off by default; the API key lives in the "tts" secret slot.</summary>
+    public sealed class TtsSettings
+    {
+        /// <summary>"none", "openai-compatible" (Kokoro-FastAPI, OpenAI, ...) or "fish-audio".</summary>
+        public string Provider = TtsProviderIds.None;
+        /// <summary>Id from <see cref="TtsPresets"/>; only used to prefill fields in the UI.</summary>
+        public string Preset = "kokoro";
+        public string BaseUrl = "http://localhost:8880/v1";
+        public string Model = "kokoro";
+        /// <summary>Voice name (OpenAI-compatible) or voice model id (Fish Audio reference_id).</summary>
+        public string Voice = "af_heart";
+        /// <summary>0.5 to 2.</summary>
+        public float Speed = 1f;
+        /// <summary>0 to 1, applied to the voice's AudioSource.</summary>
+        public float Volume = 1f;
+        /// <summary>Don't speak text between asterisks (*smiles*).</summary>
+        public bool SkipActions = true;
+    }
+
+    public static class TtsProviderIds
+    {
+        public const string None = "none";
+        public const string OpenAICompatible = "openai-compatible";
+        public const string FishAudio = "fish-audio";
+    }
+
+    public sealed class TtsPreset
+    {
+        public readonly string Id;
+        public readonly string DisplayName;
+        public readonly string Provider;
+        public readonly string BaseUrl;
+        public readonly string Model;
+        public readonly string Voice;
+        public readonly bool NeedsKey;
+        public readonly bool Free;
+
+        public TtsPreset(string id, string displayName, string provider, string baseUrl, string model, string voice, bool needsKey, bool free)
+        {
+            Id = id;
+            DisplayName = displayName;
+            Provider = provider;
+            BaseUrl = baseUrl;
+            Model = model;
+            Voice = voice;
+            NeedsKey = needsKey;
+            Free = free;
+        }
+    }
+
+    public static class TtsPresets
+    {
+        public static readonly IReadOnlyList<TtsPreset> All = new[]
+        {
+            new TtsPreset("kokoro", "Kokoro (local)", TtsProviderIds.OpenAICompatible, "http://localhost:8880/v1", "kokoro", "af_heart", false, true),
+            new TtsPreset("openai", "OpenAI", TtsProviderIds.OpenAICompatible, "https://api.openai.com/v1", "gpt-4o-mini-tts", "alloy", true, false),
+            new TtsPreset("fish", "Fish Audio", TtsProviderIds.FishAudio, "https://api.fish.audio", "s1", "", true, false),
+            new TtsPreset("custom", "Custom", TtsProviderIds.OpenAICompatible, "", "", "", false, false),
+        };
+
+        public static TtsPreset Find(string id)
+        {
+            foreach (TtsPreset p in All)
+                if (string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) return p;
+            return null;
+        }
     }
 
     public sealed class ChatPreset

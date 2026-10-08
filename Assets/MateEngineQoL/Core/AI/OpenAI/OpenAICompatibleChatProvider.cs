@@ -23,7 +23,6 @@ namespace MateEngineQoL.AI.OpenAI
 
         const int MaxLineChars = 1_000_000;
         const int MaxReplyChars = 200_000;
-        const int MaxErrorBodyChars = 4096;
 
         readonly HttpClient _http;
         readonly Uri _baseUri;
@@ -84,33 +83,7 @@ namespace MateEngineQoL.AI.OpenAI
             if (_apiKey != null)
                 message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            HttpResponseMessage response;
-            try
-            {
-                response = await _http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (!userToken.IsCancellationRequested)
-            {
-                throw new ProviderException("Timed out connecting to " + _baseUri.Host + ".");
-            }
-            catch (HttpRequestException e)
-            {
-                throw new ProviderException("Could not reach " + _baseUri.Host + ": " + OneLine(e.InnerException?.Message ?? e.Message), null, e);
-            }
-            finally
-            {
-                message.Dispose();
-            }
-
-            if (response.IsSuccessStatusCode) return response;
-
-            using (response)
-            {
-                string detail = await ReadErrorAsync(response).ConfigureAwait(false);
-                int code = (int)response.StatusCode;
-                string hint = code == 401 || code == 403 ? " Check the API key." : code == 404 ? " Check the base URL and model name." : "";
-                throw new ProviderException(_baseUri.Host + " returned " + code + " " + response.ReasonPhrase + ": " + detail + hint, code);
-            }
+            return await ProviderHttp.SendAsync(_http, message, _baseUri, token, userToken).ConfigureAwait(false);
         }
 
         internal static string BuildBody(ChatRequest request)
@@ -137,56 +110,11 @@ namespace MateEngineQoL.AI.OpenAI
             catch (JsonReaderException) { return null; }
 
             if (obj["error"] is JToken error && error.Type != JTokenType.Null)
-                throw new ProviderException("Provider error: " + OneLine(ErrorText(error) ?? error.ToString(Formatting.None)));
+                throw new ProviderException("Provider error: " + ProviderHttp.OneLine(ProviderHttp.ErrorText(error) ?? error.ToString(Formatting.None)));
 
             if (!(obj["choices"] is JArray choices) || choices.Count == 0) return null; // e.g. usage-only chunks
             JToken content = choices[0]["delta"]?["content"];
             return content != null && content.Type == JTokenType.String ? (string)content : null;
-        }
-
-        static async Task<string> ReadErrorAsync(HttpResponseMessage response)
-        {
-            string body;
-            try
-            {
-                using (Stream s = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (var reader = new StreamReader(s, Encoding.UTF8))
-                {
-                    var buffer = new char[MaxErrorBodyChars];
-                    int n = await reader.ReadBlockAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
-                    body = new string(buffer, 0, n);
-                }
-            }
-            catch (Exception)
-            {
-                return "(no details)";
-            }
-
-            try
-            {
-                if (JToken.Parse(body) is JObject json)
-                {
-                    string message = ErrorText(json["error"]) ?? ErrorText(json["message"]);
-                    if (!string.IsNullOrEmpty(message)) return OneLine(message);
-                }
-            }
-            catch (JsonException) { }
-            return string.IsNullOrWhiteSpace(body) ? "(no details)" : OneLine(body);
-        }
-
-        /// <summary>Error text from either <c>"error": "text"</c> or <c>"error": { "message": "text" }</c>.</summary>
-        static string ErrorText(JToken token)
-        {
-            if (token == null) return null;
-            if (token.Type == JTokenType.String) return (string)token;
-            if (token is JObject obj && obj["message"] is JToken m && m.Type == JTokenType.String) return (string)m;
-            return null;
-        }
-
-        static string OneLine(string s)
-        {
-            s = (s ?? "").Replace('\r', ' ').Replace('\n', ' ').Trim();
-            return s.Length > 300 ? s.Substring(0, 300) + "..." : s;
         }
     }
 }

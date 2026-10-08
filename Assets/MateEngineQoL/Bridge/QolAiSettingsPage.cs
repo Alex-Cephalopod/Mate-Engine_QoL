@@ -32,6 +32,17 @@ namespace MateEngineQoL.Bridge
         readonly List<CanvasGroup> _remoteOnly = new List<CanvasGroup>();
         CancellationTokenSource _testCts;
 
+        TMP_Dropdown _ttsProvider;
+        InputField _ttsUrl, _ttsModel, _ttsVoice, _ttsKey;
+        Button _ttsRemoveKey, _ttsTest;
+        Slider _ttsSpeed, _ttsVolume;
+        TMP_Text _ttsHint, _ttsStatus, _ttsSpeedLabel, _ttsVolumeLabel;
+        readonly List<CanvasGroup> _ttsRows = new List<CanvasGroup>();
+        float _ttsSaveAt = -1f;
+        bool _ttsTesting;
+        float _ttsTestUntil;
+        int _ttsTestSentences, _ttsTestErrors;
+
         TMP_Dropdown _character;
         InputField _characterName, _greeting;
         readonly List<string> _characterIds = new List<string>();
@@ -44,6 +55,15 @@ namespace MateEngineQoL.Bridge
             for (int i = 0; i < ChatPresets.All.Count; i++)
                 if (ChatPresets.All[i].Id == s.Preset) return i + 1;
             return ChatPresets.All.Count; // custom
+        }
+
+        // Index 0 is "Off"; 1..N map to TtsPresets.All.
+        static int TtsPresetToIndex(TtsSettings s)
+        {
+            if (string.IsNullOrEmpty(s.Provider) || s.Provider == TtsProviderIds.None) return 0;
+            for (int i = 0; i < TtsPresets.All.Count; i++)
+                if (TtsPresets.All[i].Id == s.Preset) return i + 1;
+            return TtsPresets.All.Count; // custom
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -70,6 +90,8 @@ namespace MateEngineQoL.Bridge
             pageGo.SetActive(false);
             var page = pageGo.AddComponent<QolAiSettingsPage>();
             page._mainMenu = mainMenu.gameObject;
+            page.CollectOtherPages(canvas);
+            SaveLoadHandler.Instance.gameObject.AddComponent<PageWatcher>().Page = page;
 
             Transform content = pageGo.GetComponent<ScrollRect>().content;
             TMP_Text titleTemplate = colorMenu.GetComponent<ScrollRect>().content.GetComponentInChildren<TMP_Text>(true);
@@ -92,7 +114,8 @@ namespace MateEngineQoL.Bridge
                 Find(aiInput, "AiSystemPrompt").GetComponent<InputField>(),
                 Find(aiInput, "Text").GetComponent<TMP_Text>(),
                 Find(aiInput, "Text (1)").GetComponent<TMP_Text>(),
-                back);
+                back,
+                Find(mainContent, "MenuPanel/Main Menu/= AUDIO/Menu Volumen").GetComponent<Slider>());
 
             // Entry button at the right end of the AI section header.
             GameObject open = Instantiate(back.gameObject, aiHeader);
@@ -108,7 +131,7 @@ namespace MateEngineQoL.Bridge
         }
 
         void BuildRows(Transform content, TMP_Text titleTemplate, TMP_Dropdown dropdownTemplate, InputField inputTemplate,
-            TMP_Text labelTemplate, TMP_Text noteTemplate, Button buttonTemplate)
+            TMP_Text labelTemplate, TMP_Text noteTemplate, Button buttonTemplate, Slider sliderTemplate)
         {
             QolServices.EnsureInitialized();
 
@@ -137,6 +160,8 @@ namespace MateEngineQoL.Bridge
             _status = AddText(content, noteTemplate, "", 48f);
             AddText(content, noteTemplate, QolText.Get("QOL_NOTE_PRIVACY"), 40f);
 
+            BuildVoiceRows(content, titleTemplate, dropdownTemplate, inputTemplate, labelTemplate, noteTemplate, buttonTemplate, sliderTemplate);
+
             // Characters (Phase 7a).
             if (titleTemplate != null) AddText(content, titleTemplate, QolText.Get("QOL_CHARACTERS_TITLE"), 60f);
             _character = AddDropdown(content, dropdownTemplate, "QOL_CHARACTER");
@@ -153,26 +178,307 @@ namespace MateEngineQoL.Bridge
             AddText(content, noteTemplate, QolText.Get("QOL_CHARACTER_NOTE"), 40f);
         }
 
+        // ---- voice (Phase 2) ---------------------------------------------------
+
+        void BuildVoiceRows(Transform content, TMP_Text titleTemplate, TMP_Dropdown dropdownTemplate, InputField inputTemplate,
+            TMP_Text labelTemplate, TMP_Text noteTemplate, Button buttonTemplate, Slider sliderTemplate)
+        {
+            if (titleTemplate != null) AddText(content, titleTemplate, QolText.Get("QOL_VOICE_TITLE"), 60f);
+
+            _ttsProvider = AddDropdown(content, dropdownTemplate, "QOL_TTS_PROVIDER");
+            _ttsProvider.ClearOptions();
+            var options = new List<string> { QolText.Get("QOL_TTS_OFF") };
+            foreach (TtsPreset p in TtsPresets.All) options.Add(p.DisplayName);
+            _ttsProvider.AddOptions(options);
+            _ttsProvider.onValueChanged.AddListener(OnTtsProviderChanged);
+            _ttsHint = AddText(content, noteTemplate, "", 40f);
+
+            _ttsUrl = AddInput(content, inputTemplate, labelTemplate, "QOL_BASE_URL", false, _ttsRows);
+            _ttsUrl.onEndEdit.AddListener(_ => SaveTtsFields());
+            _ttsModel = AddInput(content, inputTemplate, labelTemplate, "QOL_MODEL", false, _ttsRows);
+            SetPlaceholder(_ttsModel, QolText.Get("QOL_TTS_MODEL_HINT"));
+            _ttsModel.onEndEdit.AddListener(_ => SaveTtsFields());
+            _ttsVoice = AddInput(content, inputTemplate, labelTemplate, "QOL_TTS_VOICE", false, _ttsRows);
+            SetPlaceholder(_ttsVoice, QolText.Get("QOL_TTS_VOICE_HINT"));
+            _ttsVoice.onEndEdit.AddListener(_ => SaveTtsFields());
+            _ttsKey = AddInput(content, inputTemplate, labelTemplate, "QOL_API_KEY", true, _ttsRows);
+            _ttsKey.onEndEdit.AddListener(OnTtsKeyEntered);
+            _ttsRemoveKey = AddButton(content, buttonTemplate, "QOL_REMOVE_KEY", () =>
+            {
+                QolServices.SetApiKey(QolSecrets.TtsSlot, null);
+                RefreshVoice();
+            });
+            _ttsRows.Add(_ttsRemoveKey.gameObject.AddComponent<CanvasGroup>());
+
+            _ttsSpeed = AddSlider(content, sliderTemplate, 0.5f, 2f, out _ttsSpeedLabel);
+            _ttsSpeed.onValueChanged.AddListener(v =>
+            {
+                QolServices.Settings.Tts.Speed = Mathf.Round(v * 20f) / 20f;
+                ShowSliderLabels();
+                _ttsSaveAt = Time.unscaledTime + 0.5f;
+            });
+            _ttsVolume = AddSlider(content, sliderTemplate, 0f, 1f, out _ttsVolumeLabel);
+            _ttsVolume.onValueChanged.AddListener(v =>
+            {
+                QolServices.Settings.Tts.Volume = Mathf.Round(v * 100f) / 100f;
+                ShowSliderLabels();
+                _ttsSaveAt = Time.unscaledTime + 0.5f;
+            });
+
+            _ttsTest = AddButton(content, buttonTemplate, "QOL_TTS_TEST", RunVoiceTest);
+            _ttsRows.Add(_ttsTest.gameObject.AddComponent<CanvasGroup>());
+            _ttsStatus = AddText(content, noteTemplate, "", 40f);
+            AddText(content, noteTemplate, QolText.Get("QOL_TTS_NOTE"), 40f);
+        }
+
+        void RefreshVoice()
+        {
+            TtsSettings tts = QolServices.Settings.Tts;
+            _ttsProvider.SetValueWithoutNotify(TtsPresetToIndex(tts));
+            _ttsProvider.RefreshShownValue();
+            _ttsUrl.SetTextWithoutNotify(tts.BaseUrl ?? "");
+            _ttsModel.SetTextWithoutNotify(tts.Model ?? "");
+            _ttsVoice.SetTextWithoutNotify(tts.Voice ?? "");
+            _ttsKey.SetTextWithoutNotify(""); // stored keys are never shown again
+            _ttsSpeed.SetValueWithoutNotify(tts.Speed);
+            _ttsVolume.SetValueWithoutNotify(tts.Volume);
+            ShowSliderLabels();
+
+            bool on = !string.IsNullOrEmpty(tts.Provider) && tts.Provider != TtsProviderIds.None;
+            foreach (CanvasGroup g in _ttsRows)
+            {
+                g.interactable = on;
+                g.alpha = on ? 1f : 0.4f;
+            }
+
+            TtsPreset preset = TtsPresets.Find(tts.Preset);
+            bool fromEnv = QolServices.Store.IsKeyFromEnvironment(QolSecrets.TtsSlot);
+            bool hasKey = QolServices.HasApiKey(QolSecrets.TtsSlot);
+            string keyHint = fromEnv ? "QOL_TTS_KEY_ENV"
+                : hasKey ? "QOL_API_KEY_SAVED"
+                : preset != null && !preset.NeedsKey && preset.Id != "custom" ? "QOL_API_KEY_NOT_NEEDED"
+                : "QOL_API_KEY_HINT";
+            SetPlaceholder(_ttsKey, QolText.Get(keyHint));
+            _ttsKey.interactable = on && !fromEnv;
+            _ttsRemoveKey.interactable = on && hasKey && !fromEnv;
+
+            _ttsHint.text = QolText.Get(!on ? "QOL_TTS_HINT_OFF"
+                : preset == null || preset.Id == "custom" ? "QOL_TTS_HINT_CUSTOM"
+                : "QOL_TTS_HINT_" + preset.Id.ToUpperInvariant());
+            ShowVoiceStatus();
+        }
+
+        void ShowSliderLabels()
+        {
+            TtsSettings tts = QolServices.Settings.Tts;
+            if (_ttsSpeedLabel != null) _ttsSpeedLabel.text = QolText.Format("QOL_TTS_SPEED", tts.Speed.ToString("0.00"));
+            if (_ttsVolumeLabel != null) _ttsVolumeLabel.text = QolText.Format("QOL_TTS_VOLUME", Mathf.RoundToInt(tts.Volume * 100f));
+        }
+
+        void ShowVoiceStatus()
+        {
+            if (_ttsTesting) return;
+            ProviderRegistry r = QolServices.Registry;
+            QolVoicePipeline voice = QolVoicePipeline.Instance;
+            if (r.TtsError != null) _ttsStatus.text = QolText.Format("QOL_STATUS_ERROR", r.TtsError);
+            else if (r.Tts == null) _ttsStatus.text = QolText.Get("QOL_TTS_STATUS_OFF");
+            else if (voice != null && voice.LastError != null) _ttsStatus.text = QolText.Format("QOL_TTS_STATUS_LAST_ERROR", voice.LastError);
+            else _ttsStatus.text = QolText.Format("QOL_TTS_STATUS_READY", HostOf(QolServices.Settings.Tts.BaseUrl));
+        }
+
+        void OnTtsProviderChanged(int index)
+        {
+            QolSettings s = QolServices.Settings;
+            if (index == 0)
+            {
+                s.Tts.Provider = TtsProviderIds.None;
+            }
+            else
+            {
+                TtsPreset preset = TtsPresets.All[index - 1];
+                bool samePreset = preset.Id == s.Tts.Preset && s.Tts.Provider != TtsProviderIds.None;
+                s.Tts.Provider = preset.Provider;
+                s.Tts.Preset = preset.Id;
+                if (!samePreset && preset.Id != "custom")
+                {
+                    s.Tts.BaseUrl = preset.BaseUrl;
+                    s.Tts.Model = preset.Model;
+                    s.Tts.Voice = preset.Voice;
+                }
+            }
+            QolServices.SaveSettings(s);
+            RefreshVoice();
+        }
+
+        void SaveTtsFields()
+        {
+            QolSettings s = QolServices.Settings;
+            string url = _ttsUrl.text.Trim();
+            TtsPreset preset = TtsPresets.Find(s.Tts.Preset);
+            // Editing an OpenAI-compatible preset's URL makes it a custom server.
+            if (url != s.Tts.BaseUrl && preset != null && s.Tts.Provider == TtsProviderIds.OpenAICompatible
+                && !string.Equals(preset.BaseUrl, url, StringComparison.OrdinalIgnoreCase))
+                s.Tts.Preset = "custom";
+            s.Tts.BaseUrl = url;
+            s.Tts.Model = _ttsModel.text.Trim();
+            s.Tts.Voice = _ttsVoice.text.Trim();
+            QolServices.SaveSettings(s);
+            RefreshVoice();
+        }
+
+        void OnTtsKeyEntered(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return;
+            QolServices.SetApiKey(QolSecrets.TtsSlot, key);
+            _ttsKey.SetTextWithoutNotify("");
+            RefreshVoice();
+        }
+
+        /// <summary>Slider moves change the live settings at once and are written to disk shortly after the last move.</summary>
+        void FlushVoiceSliders()
+        {
+            if (_ttsSaveAt < 0f) return;
+            _ttsSaveAt = -1f;
+            QolServices.SaveSettings(QolServices.Settings);
+        }
+
+        void RunVoiceTest()
+        {
+            FlushVoiceSliders();
+            QolVoicePipeline voice = QolVoicePipeline.Instance;
+            if (voice == null || QolServices.Registry.Tts == null)
+            {
+                ShowVoiceStatus();
+                return;
+            }
+            _ttsTesting = true;
+            _ttsTestUntil = Time.unscaledTime + 45f;
+            _ttsTestSentences = voice.SentencesStarted;
+            _ttsTestErrors = voice.ErrorCount;
+            _ttsStatus.text = QolText.Get("QOL_TESTING");
+            voice.Speak(QolText.Get("QOL_TTS_SAMPLE"));
+        }
+
+        void Update()
+        {
+            if (_ttsSaveAt >= 0f && Time.unscaledTime >= _ttsSaveAt) FlushVoiceSliders();
+            if (!_ttsTesting) return;
+            QolVoicePipeline voice = QolVoicePipeline.Instance;
+            if (voice == null || Time.unscaledTime > _ttsTestUntil)
+            {
+                _ttsTesting = false;
+                ShowVoiceStatus();
+            }
+            else if (voice.ErrorCount != _ttsTestErrors)
+            {
+                _ttsTesting = false;
+                _ttsStatus.text = QolText.Format("QOL_TEST_FAILED", voice.LastError);
+            }
+            else if (voice.SentencesStarted != _ttsTestSentences)
+            {
+                _ttsTesting = false;
+                _ttsStatus.text = QolText.Format("QOL_TTS_TEST_OK", voice.LastLatencyMs);
+            }
+        }
+
         // ---- page open/close -------------------------------------------------
+        //
+        // Upstream's page buttons (e.g. the lighting toggle) flip pages with UISetOnOff.SetOnOff, which
+        // toggles activeSelf. If this page deactivated Main Menu, such a flip would turn it back on and
+        // both pages would overlap. So Main Menu stays active but hidden while this page is open, and
+        // PageWatcher closes this page as soon as upstream switches pages or the settings window closes.
+
+        CanvasGroup _mainMenuGroup;
+        float _mainAlpha;
+        bool _mainInteractable, _mainBlocksRaycasts, _mainHidden;
+        readonly List<GameObject> _otherPages = new List<GameObject>();
+        readonly HashSet<GameObject> _pagesOpenAtStart = new HashSet<GameObject>();
 
         public void Open()
         {
             Refresh();
-            _mainMenu.SetActive(false);
+            _pagesOpenAtStart.Clear();
+            foreach (GameObject p in _otherPages)
+                if (p != null && p.activeInHierarchy) _pagesOpenAtStart.Add(p);
+            HideMainMenu();
             gameObject.SetActive(true);
         }
 
         public void Close()
         {
             gameObject.SetActive(false);
-            _mainMenu.SetActive(true);
+            ShowMainMenu();
         }
 
         void OnDisable()
         {
-            // Closing the whole settings window while on this page: show the main page next time.
             _testCts?.Cancel();
-            if (_mainMenu != null && !_mainMenu.activeSelf) _mainMenu.SetActive(true);
+            _ttsTesting = false;
+            FlushVoiceSliders();
+        }
+
+        /// <summary>Upstream pages that can open over this one: the canvas's top-level objects and every scroll page
+        /// (models list, mod list, ...), except Main Menu and this page. Objects already open on Open() are ignored.</summary>
+        void CollectOtherPages(Transform canvas)
+        {
+            var found = new HashSet<GameObject>();
+            foreach (Transform child in canvas) found.Add(child.gameObject);
+            foreach (ScrollRect s in canvas.GetComponentsInChildren<ScrollRect>(true)) found.Add(s.gameObject);
+            foreach (GameObject go in found)
+                if (!go.transform.IsChildOf(transform) && !go.transform.IsChildOf(_mainMenu.transform))
+                    _otherPages.Add(go);
+        }
+
+        void HideMainMenu()
+        {
+            if (_mainHidden) return;
+            if (_mainMenuGroup == null) _mainMenuGroup = _mainMenu.GetComponent<CanvasGroup>();
+            if (_mainMenuGroup == null) _mainMenuGroup = _mainMenu.AddComponent<CanvasGroup>();
+            _mainAlpha = _mainMenuGroup.alpha;
+            _mainInteractable = _mainMenuGroup.interactable;
+            _mainBlocksRaycasts = _mainMenuGroup.blocksRaycasts;
+            _mainMenuGroup.alpha = 0f;
+            _mainMenuGroup.interactable = false;
+            _mainMenuGroup.blocksRaycasts = false;
+            _mainHidden = true;
+        }
+
+        void ShowMainMenu()
+        {
+            if (!_mainHidden || _mainMenuGroup == null) return;
+            _mainMenuGroup.alpha = _mainAlpha;
+            _mainMenuGroup.interactable = _mainInteractable;
+            _mainMenuGroup.blocksRaycasts = _mainBlocksRaycasts;
+            _mainHidden = false;
+        }
+
+        /// <summary>Called every frame by <see cref="PageWatcher"/> while this page is open.</summary>
+        void Watch()
+        {
+            if (!_canvas.gameObject.activeInHierarchy || !_mainMenu.activeSelf)
+            {
+                Close(); // settings window closed, or upstream switched away from Main Menu
+                return;
+            }
+            foreach (GameObject p in _otherPages)
+            {
+                if (p != null && p.activeInHierarchy && !_pagesOpenAtStart.Contains(p))
+                {
+                    Close(); // another page opened on top
+                    return;
+                }
+            }
+        }
+
+        /// <summary>Lives on SaveLoadHandler's object, which stays active while the settings canvas is closed.</summary>
+        sealed class PageWatcher : MonoBehaviour
+        {
+            public QolAiSettingsPage Page;
+
+            void Update()
+            {
+                if (Page != null && Page.gameObject.activeSelf) Page.Watch();
+            }
         }
 
         void Refresh()
@@ -203,6 +509,7 @@ namespace MateEngineQoL.Bridge
             _removeKey.interactable = remote && hasKey && !fromEnv;
 
             RefreshCharacters();
+            RefreshVoice();
 
             _presetHint.text = QolText.Get(!remote ? "QOL_HINT_BUILTIN"
                 : preset == null || preset.Id == "custom" ? "QOL_HINT_CUSTOM"
@@ -428,6 +735,7 @@ namespace MateEngineQoL.Bridge
                 f.onSubmit = new InputField.SubmitEvent();
             }
             foreach (TMP_Dropdown d in go.GetComponentsInChildren<TMP_Dropdown>(true)) d.onValueChanged = new TMP_Dropdown.DropdownEvent();
+            foreach (Slider s in go.GetComponentsInChildren<Slider>(true)) s.onValueChanged = new Slider.SliderEvent();
         }
 
         static void Stretch(RectTransform rt, float top, float height)
@@ -500,6 +808,25 @@ namespace MateEngineQoL.Bridge
 
             (group ?? _remoteOnly).Add(row.gameObject.AddComponent<CanvasGroup>());
             return field;
+        }
+
+        /// <summary>A slider laid out like upstream's volume rows; its "Text" child is the label, returned for live values.</summary>
+        Slider AddSlider(Transform content, Slider template, float min, float max, out TMP_Text label)
+        {
+            RectTransform row = Row(content, 50f);
+            var slider = Clone(template.gameObject, row).GetComponent<Slider>();
+            var rect = (RectTransform)slider.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, RowPadding + 4f);
+            rect.sizeDelta = ((RectTransform)template.transform).rect.size;
+            slider.wholeNumbers = false;
+            slider.minValue = min;
+            slider.maxValue = max;
+            Transform text = slider.transform.Find("Text");
+            label = text != null ? text.GetComponent<TMP_Text>() : null;
+            _ttsRows.Add(row.gameObject.AddComponent<CanvasGroup>());
+            return slider;
         }
 
         Button AddButton(Transform content, Button template, string labelKey, UnityEngine.Events.UnityAction onClick)

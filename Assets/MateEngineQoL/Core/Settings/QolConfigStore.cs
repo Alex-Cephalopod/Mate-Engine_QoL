@@ -64,6 +64,7 @@ namespace MateEngineQoL.Settings
                 if (s.Chat == null) s.Chat = new ChatSettings();
                 if (s.Characters == null) s.Characters = new CharacterSettings();
                 if (s.Context == null) s.Context = new ContextSettings();
+                if (s.Tts == null) s.Tts = new TtsSettings();
                 return s;
             }
             catch (JsonException e)

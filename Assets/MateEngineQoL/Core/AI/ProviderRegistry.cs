@@ -20,11 +20,46 @@ namespace MateEngineQoL.AI
         /// <summary>Why the configured provider couldn't be built (bad URL, missing key); null if fine.</summary>
         public string ChatError { get; private set; }
 
+        public delegate ITtsProvider TtsFactory(TtsSettings settings, string apiKey);
+
+        readonly Dictionary<string, TtsFactory> _ttsFactories = new Dictionary<string, TtsFactory>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The active text-to-speech provider, or null when voice is off or not ready.</summary>
+        public ITtsProvider Tts { get; private set; }
+
+        /// <summary>Why the configured TTS provider couldn't be built; null if fine or off.</summary>
+        public string TtsError { get; private set; }
+
         public event Action Changed;
 
         public void RegisterChat(string id, ChatFactory factory) => _chatFactories[id] = factory;
 
+        public void RegisterTts(string id, TtsFactory factory) => _ttsFactories[id] = factory;
+
         public void Rebuild(QolSettings settings, Func<string, string> getApiKey)
+        {
+            RebuildChat(settings, getApiKey);
+            RebuildTts(settings, getApiKey);
+            Changed?.Invoke();
+        }
+
+        void RebuildTts(QolSettings settings, Func<string, string> getApiKey)
+        {
+            Tts = null;
+            TtsError = null;
+
+            string id = settings?.Tts?.Provider ?? TtsProviderIds.None;
+            if (string.IsNullOrEmpty(id) || string.Equals(id, TtsProviderIds.None, StringComparison.OrdinalIgnoreCase)) return;
+            if (!_ttsFactories.TryGetValue(id, out TtsFactory factory))
+            {
+                TtsError = "Unknown voice provider '" + id + "'.";
+                return;
+            }
+            try { Tts = factory(settings.Tts, getApiKey(QolSecrets.TtsSlot)); }
+            catch (ProviderException e) { TtsError = e.Message; }
+        }
+
+        void RebuildChat(QolSettings settings, Func<string, string> getApiKey)
         {
             Chat = null;
             ChatError = null;
@@ -42,8 +77,6 @@ namespace MateEngineQoL.AI
                     ChatError = "Unknown chat provider '" + id + "'.";
                 }
             }
-
-            Changed?.Invoke();
         }
     }
 }

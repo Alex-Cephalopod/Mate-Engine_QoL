@@ -255,6 +255,9 @@ namespace MateEngineQoL.Bridge
 
         // ---- upstream glue -----------------------------------------------------------
 
+        /// <summary>Stops the reply in progress, remote or local (used when the avatar is grabbed mid-speech).</summary>
+        public void CancelReply() => CancelChat();
+
         void CancelChat()
         {
             // Not ChatBot.CancelRequests: it needs ChatBot.Start to have run (the chat window may be closed) and throws when

@@ -169,6 +169,93 @@ MonoBehaviour:
     m_Localized: 'Talking to {0}. Characters: {1}. Switch with /char <name>.'
     m_Metadata:
       m_Items: []
+  - m_Id: 589648218796032
+    m_Localized: VOICE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739072
+    m_Localized: VOICE PROVIDER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739073
+    m_Localized: Off
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739074
+    m_Localized: Replies are not spoken.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739075
+    m_Localized: 'Free. Runs on this PC: start Kokoro-FastAPI on port 8880 first.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739076
+    m_Localized: Needs an OpenAI key. Paid per use (about $0.015 per minute of speech).
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739077
+    m_Localized: Needs a Fish Audio key. Paid per use. VOICE takes a voice model
+      id from fish.audio.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739078
+    m_Localized: Any OpenAI-compatible /audio/speech server that returns raw PCM.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739079
+    m_Localized: VOICE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739080
+    m_Localized: e.g. af_heart (Kokoro), alloy (OpenAI), or a Fish voice model id
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739081
+    m_Localized: e.g. kokoro, gpt-4o-mini-tts, or s1 for Fish
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739082
+    m_Localized: Using MEQOL_TTS_API_KEY from the environment
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739083
+    m_Localized: SPEED {0}x
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739084
+    m_Localized: VOLUME {0}%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739085
+    m_Localized: TEST VOICE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739086
+    m_Localized: Speaking. First audio after {0} ms.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739087
+    m_Localized: Hi! This is how I sound. Do you like my voice?
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739088
+    m_Localized: Voice is off.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739089
+    m_Localized: 'Ready: replies are spoken by {0}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739090
+    m_Localized: 'Last voice error: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739091
+    m_Localized: Reply text is sent to the voice server; Kokoro keeps it on this
+      PC. Text between *asterisks* is not spoken. Grab the avatar or send a new message
+      to stop it talking.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

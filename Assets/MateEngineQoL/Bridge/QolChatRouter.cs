@@ -22,6 +22,10 @@ namespace MateEngineQoL.Bridge
     public static class QolChatRouter
     {
         static CancellationTokenSource _cts;
+        static int _replyId;
+
+        /// <summary>True from Send until the newest reply's done callback has run.</summary>
+        public static bool IsReplying { get; private set; }
 
         /// <summary>Raised on the main thread for every piece of reply text, for any provider (voice pipeline hook).</summary>
         public static event Action<string> ReplyDelta;
@@ -43,7 +47,16 @@ namespace MateEngineQoL.Bridge
         public static void Send(LLMCharacter llm, string message, Action<string> onPartial, Action onDone)
         {
             QolServices.EnsureInitialized();
+            // Marked before Cancel so listeners stopping the old reply know a new one is starting.
+            int id = ++_replyId;
+            IsReplying = true;
             Cancel();
+            Action innerDone = onDone;
+            onDone = () =>
+            {
+                if (_replyId == id) IsReplying = false; // a cancelled older reply finishing late doesn't count
+                innerDone();
+            };
 
             if (CharacterManager.IsReady && ChatCommand.TryParse(message, out ChatCommand command))
             {
@@ -71,8 +84,13 @@ namespace MateEngineQoL.Bridge
             _ = SendRemoteAsync(provider, llm, message, generation, onPartial, onDone, _cts.Token);
         }
 
+        /// <summary>Raised whenever a reply is cancelled or replaced by a new message, so speech stops too.</summary>
+        public static event Action Cancelled;
+
         public static void Cancel()
         {
+            try { Cancelled?.Invoke(); }
+            catch (Exception e) { Debug.LogException(e); }
             if (_cts == null) return;
             _cts.Cancel();
             _cts.Dispose();

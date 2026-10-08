@@ -17,11 +17,12 @@ This fork adds network clients, API keys, external processes and user-supplied f
   - Keep LLMUnity's `LLM.remote` off. When on, it serves on `0.0.0.0:13333`.
 - Outbound calls go only to the base URL the user configured for each provider. No telemetry, no auto-update, no other endpoints.
 - HTTPS for every remote provider; certificate validation is never disabled.
-- Every request has a timeout and a cancellation token. Response bodies and SSE streams have a size cap so a bad server can't exhaust memory. Implemented for chat: 30 s connect, 60 s idle between chunks, 1 MB per SSE line, 200,000 characters per reply, 4 KB error bodies (shown as one trimmed line).
+- Every request has a timeout and a cancellation token. Response bodies and SSE streams have a size cap so a bad server can't exhaust memory. Implemented for chat: 30 s connect, 60 s idle between chunks, 1 MB per SSE line, 200,000 characters per reply, 4 KB error bodies (shown as one trimmed line). Voice: 30 s connect and idle, 4096 characters per sentence, 10 minutes of audio per sentence, non-PCM bodies refused.
 
 ## Model output is untrusted input
 
 - LLM replies, STT transcripts and remote JSON are data. They never become file paths, process arguments, URLs, shell text or code.
+- Reply text sent to TTS is filtered (`Core/Voice/SpeechFilter.cs`); the Fish `model` header only takes plain ids (letters, digits, `.-_`), so settings text can't inject headers.
 - Tag parsing (Phase 5) is an allow-list: `emotion` maps to a fixed set of expressions; `action` only looks up clips already in the loaded library. Unknown tags are dropped.
 - Text shown in bubbles has Unity rich-text tags stripped or escaped.
 

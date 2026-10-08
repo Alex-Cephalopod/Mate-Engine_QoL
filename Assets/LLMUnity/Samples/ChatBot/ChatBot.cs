@@ -277,7 +277,7 @@ namespace LLMUnitySamples
             AddBubble(message, true);
             Bubble aiBubble = AddBubble("...", false);
 
-            if (streamAudioSource != null)
+            if (streamAudioSource != null && !MateEngineQoL.Bridge.QolVoicePipeline.IsEnabled) // QoL: spoken replies replace the gibberish voice
                 streamAudioSource.Play();
             if (avatarAnimator != null) avatarAnimator.SetBool(isTalkingHash, true);
 
@@ -287,7 +287,8 @@ namespace LLMUnitySamples
                 (partial) => { aiBubble.SetText(partial); layoutDirty = true; },
                 () =>
                 {
-                    if (avatarAnimator != null) avatarAnimator.SetBool(isTalkingHash, false);
+                    // QoL: while the reply is still being spoken, QolVoicePipeline keeps isTalking on and clears it at the end
+                    if (avatarAnimator != null && !MateEngineQoL.Bridge.QolVoicePipeline.IsSpeaking) avatarAnimator.SetBool(isTalkingHash, false);
 
                     aiBubble.SetText(aiBubble.GetText());
                     layoutDirty = true;

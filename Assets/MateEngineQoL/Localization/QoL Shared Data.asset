@@ -163,6 +163,90 @@ MonoBehaviour:
     m_Key: QOL_CMD_CHARACTERS
     m_Metadata:
       m_Items: []
+  - m_Id: 589648218796032
+    m_Key: QOL_VOICE_TITLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739072
+    m_Key: QOL_TTS_PROVIDER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739073
+    m_Key: QOL_TTS_OFF
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739074
+    m_Key: QOL_TTS_HINT_OFF
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739075
+    m_Key: QOL_TTS_HINT_KOKORO
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739076
+    m_Key: QOL_TTS_HINT_OPENAI
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739077
+    m_Key: QOL_TTS_HINT_FISH
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739078
+    m_Key: QOL_TTS_HINT_CUSTOM
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739079
+    m_Key: QOL_TTS_VOICE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739080
+    m_Key: QOL_TTS_VOICE_HINT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739081
+    m_Key: QOL_TTS_MODEL_HINT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739082
+    m_Key: QOL_TTS_KEY_ENV
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739083
+    m_Key: QOL_TTS_SPEED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739084
+    m_Key: QOL_TTS_VOLUME
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739085
+    m_Key: QOL_TTS_TEST
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739086
+    m_Key: QOL_TTS_TEST_OK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739087
+    m_Key: QOL_TTS_SAMPLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739088
+    m_Key: QOL_TTS_STATUS_OFF
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739089
+    m_Key: QOL_TTS_STATUS_READY
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739090
+    m_Key: QOL_TTS_STATUS_LAST_ERROR
+    m_Metadata:
+      m_Items: []
+  - m_Id: 589648260739091
+    m_Key: QOL_TTS_NOTE
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

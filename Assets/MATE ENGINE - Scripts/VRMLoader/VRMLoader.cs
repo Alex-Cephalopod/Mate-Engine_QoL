@@ -307,6 +307,7 @@ public class VRMLoader : MonoBehaviour
 
         StartCoroutine(ReleaseRamAndUnloadAssetsCo());
         SettingsHandlerUtility.ReloadAllSettingsHandlers();
+        MateEngineQoL.Bridge.QolEvents.RaiseAvatarLoaded(loadedModel); // QoL: attach lip sync etc.
     }
 
     public Texture2D MakeReadableCopy(Texture texture)
@@ -343,6 +344,7 @@ public class VRMLoader : MonoBehaviour
             MEModLoader.Instance.AssignHandlersForCurrentAvatar(mainModel);
 
         StartCoroutine(ReleaseRamAndUnloadAssetsCo());
+        MateEngineQoL.Bridge.QolEvents.RaiseAvatarLoaded(mainModel); // QoL
     }
 
     private void DisableMainModel()
@@ -480,6 +482,7 @@ public class VRMLoader : MonoBehaviour
 
         StartCoroutine(ReleaseRamAndUnloadAssetsCo());
         SettingsHandlerUtility.ReloadAllSettingsHandlers();
+        MateEngineQoL.Bridge.QolEvents.RaiseAvatarLoaded(mainModel); // QoL
     }
 
     private System.Collections.IEnumerator ReleaseRamAndUnloadAssetsCo()
