@@ -110,6 +110,7 @@ Do not commit these; they are environment noise, not changes.
 - `ProjectSettings/ProjectSettings.asset` and `UserSettings/` can show line-ending-only diffs.
 - **Play mode:** `ThemeManager` tints the shared `Assets/MATE ENGINE - Scripts/ThemeManager/*.mat` materials at runtime, so they show as modified after playing in the Editor.
 - `unity command capture_game_view --save_path Temp/x.png` actually writes to `Assets/Temp/x.png`; delete it afterwards.
+- **Tracked but ignored:** upstream commits `UserSettings/Layouts/default-6000.dwlt` (Editor layout) and `Assets/AddressableAssetsData/Windows/addressables_content_state.bin` (rewritten by every build). `.gitignore` lists them, but that has no effect on tracked files, so hide local changes per clone with `git update-index --skip-worktree <both paths>`. If a pull or rebase stops on one of them, run `git update-index --no-skip-worktree <path>`, discard the local copy, pull, then set it again.
 
 ## Testing in the live Editor
 

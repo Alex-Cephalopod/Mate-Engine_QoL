@@ -94,6 +94,9 @@ Tools/**/[Oo]bj/
 Assets/AddressableAssetsData/link.xml
 Assets/AddressableAssetsData/link.xml.meta
 Assets/StreamingAssets/LLMManager.json
+# Rewritten on every build. Upstream tracks it, so this only covers new platforms;
+# locally the tracked copy is hidden with skip-worktree (see docs/HOOKS.md).
+Assets/AddressableAssetsData/*/addressables_content_state.bin
 Assets/StreamingAssets/LLMManager.json.meta
 
 # QoL runtime files (live in the user data folder; never commit even if a copy lands here)
