@@ -59,41 +59,68 @@ namespace MateEngineQoL.AI.Http
         }
 
         /// <summary>
-        /// Reads a raw 16-bit little-endian mono PCM body as float chunks. Stops with an error past
-        /// <paramref name="maxBytes"/>; <paramref name="idle"/> is pushed back by <paramref name="idleTimeout"/> on every read.
+        /// Reads a speech body as mono float chunks at <paramref name="outputRate"/>. Accepts a 16-bit PCM WAV stream
+        /// (any rate or channel count; resampled and mixed down) or raw 16-bit little-endian mono PCM, taken to be at
+        /// <paramref name="outputRate"/> already. Stops with an error past <paramref name="maxBytes"/>;
+        /// <paramref name="idle"/> is pushed back by <paramref name="idleTimeout"/> on every read.
         /// </summary>
-        public static async IAsyncEnumerable<float[]> ReadPcm16Async(Stream stream, long maxBytes,
+        public static async IAsyncEnumerable<float[]> ReadSpeechAsync(Stream stream, int outputRate, long maxBytes,
             CancellationTokenSource idle, TimeSpan idleTimeout, [EnumeratorCancellation] CancellationToken ct = default)
         {
-            var decoder = new Pcm16Decoder();
-            var buffer = new byte[9600]; // 200 ms at 24 kHz
+            var buffer = new byte[9600]; // 200 ms of 16-bit audio at 24 kHz
+            var start = new MemoryStream();
             long total = 0;
-            bool first = true;
+            Pcm16Decoder raw = null;
+            WavStreamDecoder wav = null;
+            Resampler resampler = null;
             while (true)
             {
                 idle.CancelAfter(idleTimeout);
                 int n = await stream.ReadAsync(buffer, 0, buffer.Length, ct).ConfigureAwait(false);
-                if (n <= 0) yield break;
-                if (first && n >= 4 && buffer[0] == 'R' && buffer[1] == 'I' && buffer[2] == 'F' && buffer[3] == 'F')
-                    throw new ProviderException("The server sent WAV instead of raw PCM; it may not support response_format pcm.");
-                first = false;
-                total += n;
+                total += Math.Max(n, 0);
                 if (total > maxBytes)
                     throw new ProviderException("The audio exceeded " + maxBytes / 1_000_000 + " MB; stopped.");
-                float[] samples = decoder.Decode(buffer, n);
+
+                byte[] bytes = buffer;
+                int count = n;
+                if (raw == null && wav == null)
+                {
+                    // Decide the format from the first 4 bytes ("RIFF" = WAV), however the stream splits them.
+                    if (n > 0) start.Write(buffer, 0, n);
+                    if (start.Length < 4 && n > 0) continue;
+                    bytes = start.ToArray();
+                    count = bytes.Length;
+                    bool isWav = count >= 4 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F';
+                    if (isWav) wav = new WavStreamDecoder();
+                    else raw = new Pcm16Decoder();
+                }
+                if (count <= 0) yield break;
+
+                float[] samples;
+                if (wav != null)
+                {
+                    samples = wav.Decode(bytes, count);
+                    if (wav.HeaderDone && resampler == null) resampler = new Resampler(wav.SampleRate, outputRate);
+                    if (resampler != null && samples.Length > 0) samples = resampler.Process(samples);
+                }
+                else
+                {
+                    samples = raw.Decode(bytes, count);
+                }
                 if (samples.Length > 0) yield return samples;
+                if (n <= 0) yield break;
             }
         }
 
-        /// <summary>Throws if the response is clearly not raw PCM (an encoded audio format, JSON or HTML).</summary>
-        public static void RequireRawAudio(HttpResponseMessage response, string host)
+        /// <summary>Throws if the response is clearly not uncompressed audio (an encoded format, JSON or HTML).</summary>
+        public static void RequireUncompressedAudio(HttpResponseMessage response, string host)
         {
             string type = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant();
             if (type == null) return;
             if (type.Contains("json") || type.StartsWith("text/") || type.Contains("mpeg") || type.Contains("mp3")
                 || type.Contains("ogg") || type.Contains("opus") || type.Contains("aac") || type.Contains("flac")
-                || type.Contains("wav") || type.Contains("webm"))
-                throw new ProviderException(host + " sent " + type + " instead of raw PCM audio.");
+                || type.Contains("webm"))
+                throw new ProviderException(host + " sent " + type + " instead of WAV or raw PCM audio.");
         }
 
         public static async Task<string> ReadErrorAsync(HttpResponseMessage response)

@@ -58,13 +58,13 @@ namespace MateEngineQoL.Settings
     /// <summary>Text-to-speech for replies (Phase 2). Off by default; the API key lives in the "tts" secret slot.</summary>
     public sealed class TtsSettings
     {
-        /// <summary>"none", "openai-compatible" (Kokoro-FastAPI, OpenAI, ...) or "fish-audio".</summary>
+        /// <summary>"none", "openai-compatible" (Kokoro-FastAPI, Chatterbox, OpenAI, ...) or "fish-audio".</summary>
         public string Provider = TtsProviderIds.None;
         /// <summary>Id from <see cref="TtsPresets"/>; only used to prefill fields in the UI.</summary>
         public string Preset = "kokoro";
         public string BaseUrl = "http://localhost:8880/v1";
         public string Model = "kokoro";
-        /// <summary>Voice name (OpenAI-compatible) or voice model id (Fish Audio reference_id).</summary>
+        /// <summary>Voice name (OpenAI-compatible; for Chatterbox the clip's file name), or voice model id (Fish Audio reference_id).</summary>
         public string Voice = "af_heart";
         /// <summary>0.5 to 2.</summary>
         public float Speed = 1f;
@@ -110,6 +110,7 @@ namespace MateEngineQoL.Settings
         public static readonly IReadOnlyList<TtsPreset> All = new[]
         {
             new TtsPreset("kokoro", "Kokoro (local)", TtsProviderIds.OpenAICompatible, "http://localhost:8880/v1", "kokoro", "af_heart", false, true),
+            new TtsPreset("chatterbox", "Chatterbox (local)", TtsProviderIds.OpenAICompatible, "http://127.0.0.1:8004/v1", "chatterbox", "voice.wav", false, true),
             new TtsPreset("openai", "OpenAI", TtsProviderIds.OpenAICompatible, "https://api.openai.com/v1", "gpt-4o-mini-tts", "alloy", true, false),
             new TtsPreset("fish", "Fish Audio", TtsProviderIds.FishAudio, "https://api.fish.audio", "s2.1-pro-free", "", true, false),
             new TtsPreset("custom", "Custom", TtsProviderIds.OpenAICompatible, "", "", "", false, false),

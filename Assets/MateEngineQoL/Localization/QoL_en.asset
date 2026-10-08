@@ -199,7 +199,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739078
-    m_Localized: Any OpenAI-compatible /audio/speech server that returns raw PCM.
+    m_Localized: Any OpenAI-compatible /audio/speech server that can return WAV.
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739079
@@ -207,7 +207,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739080
-    m_Localized: e.g. af_heart (Kokoro), alloy (OpenAI), or a Fish voice model id
+    m_Localized: e.g. af_heart (Kokoro), myvoice.wav (Chatterbox), alloy (OpenAI),
+      or a Fish voice id
     m_Metadata:
       m_Items: []
   - m_Id: 589648260739081
@@ -254,6 +255,12 @@ MonoBehaviour:
     m_Localized: Reply text is sent to the voice server; Kokoro keeps it on this
       PC. Text between *asterisks* is not spoken. Grab the avatar or send a new message
       to stop it talking.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 613410775478272
+    m_Localized: 'Free. Runs on this PC and copies a voice from a short clip: start
+      Chatterbox-TTS-Server on port 8004 first. VOICE is the clip''s file name in
+      its reference_audio folder.'
     m_Metadata:
       m_Items: []
   references:

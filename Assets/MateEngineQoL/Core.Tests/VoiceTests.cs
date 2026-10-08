@@ -215,6 +215,74 @@ namespace MateEngineQoL.Tests
         }
     }
 
+    public class WavTests
+    {
+        /// <summary>A 16-bit PCM WAV with a LIST chunk (odd size, padded) before the data, like many encoders write.</summary>
+        internal static byte[] Wav(int rate, int channels, short[] interleaved, int format = 1, int bits = 16, bool streamed = false)
+        {
+            var ms = new System.IO.MemoryStream();
+            var w = new System.IO.BinaryWriter(ms);
+            w.Write(System.Text.Encoding.ASCII.GetBytes("RIFF")); w.Write(streamed ? -1 : 0); w.Write(System.Text.Encoding.ASCII.GetBytes("WAVE"));
+            w.Write(System.Text.Encoding.ASCII.GetBytes("fmt ")); w.Write(16); w.Write((short)format); w.Write((short)channels);
+            w.Write(rate); w.Write(rate * channels * bits / 8); w.Write((short)(channels * bits / 8)); w.Write((short)bits);
+            w.Write(System.Text.Encoding.ASCII.GetBytes("LIST")); w.Write(3); w.Write(new byte[] { 1, 2, 3, 0 });
+            w.Write(System.Text.Encoding.ASCII.GetBytes("data")); w.Write(streamed ? -1 : interleaved.Length * 2);
+            foreach (short v in interleaved) w.Write(v);
+            return ms.ToArray();
+        }
+
+        static float[] DecodeInPieces(byte[] bytes, int pieceSize, WavStreamDecoder d)
+        {
+            var all = new List<float>();
+            for (int i = 0; i < bytes.Length; i += pieceSize)
+            {
+                byte[] piece = bytes.Skip(i).Take(pieceSize).ToArray();
+                all.AddRange(d.Decode(piece, piece.Length));
+            }
+            return all.ToArray();
+        }
+
+        [Test]
+        public void DecodesHeaderAndSamplesSplitAnywhere()
+        {
+            byte[] wav = Wav(22050, 1, new short[] { 0, 16384, -16384, short.MinValue }, streamed: true);
+            foreach (int piece in new[] { 1, 3, 7, 44, 4096 })
+            {
+                var d = new WavStreamDecoder();
+                Assert.AreEqual(new[] { 0f, 0.5f, -0.5f, -1f }, DecodeInPieces(wav, piece, d), "piece size " + piece);
+                Assert.AreEqual(22050, d.SampleRate);
+            }
+        }
+
+        [Test]
+        public void MixesChannelsToMono()
+        {
+            var d = new WavStreamDecoder();
+            byte[] wav = Wav(24000, 2, new short[] { 16384, 0, -16384, -16384 });
+            Assert.AreEqual(new[] { 0.25f, -0.5f }, DecodeInPieces(wav, 5, d));
+        }
+
+        [Test]
+        public void RefusesFloatAnd8BitAndNonWav()
+        {
+            Assert.Throws<ProviderException>(() => new WavStreamDecoder().Decode(Wav(24000, 1, new short[2], format: 3, bits: 32), 60));
+            Assert.Throws<ProviderException>(() => new WavStreamDecoder().Decode(Wav(24000, 1, new short[2], bits: 8), 60));
+            byte[] notWav = System.Text.Encoding.ASCII.GetBytes("RIFFxxxxAVI LIST");
+            Assert.Throws<ProviderException>(() => new WavStreamDecoder().Decode(notWav, notWav.Length));
+        }
+
+        [Test]
+        public void RefusesEndlessHeaders()
+        {
+            var d = new WavStreamDecoder();
+            byte[] head = Wav(24000, 1, new short[0]).Take(36).ToArray(); // RIFF, WAVE, fmt
+            d.Decode(head, head.Length);
+            byte[] junk = new byte[70 * 1024];
+            byte[] chunk = System.Text.Encoding.ASCII.GetBytes("junk").Concat(BitConverter.GetBytes(int.MaxValue)).Concat(junk).ToArray();
+            Assert.Throws<ProviderException>(() => d.Decode(chunk, chunk.Length));
+        }
+    }
+
     public class TtsProviderTests
     {
         sealed class FakeHandler : HttpMessageHandler
@@ -259,7 +327,7 @@ namespace MateEngineQoL.Tests
             Assert.AreEqual("kokoro", (string)body["model"]);
             Assert.AreEqual("Hi there.", (string)body["input"]);
             Assert.AreEqual("af_heart", (string)body["voice"]);
-            Assert.AreEqual("pcm", (string)body["response_format"]);
+            Assert.AreEqual("wav", (string)body["response_format"]);
             Assert.AreEqual(1.25f, (float)body["speed"]);
         }
 
@@ -274,16 +342,26 @@ namespace MateEngineQoL.Tests
         }
 
         [Test]
-        public void RejectsEncodedAudioAndWav()
+        public void RejectsEncodedAudio()
         {
             var mp3 = new OpenAICompatibleTtsProvider(new HttpClient(new FakeHandler(_ => Pcm(new byte[8], "audio/mpeg"))), "http://localhost:8880/v1", null);
             var e = Assert.Throws<ProviderException>(() => Collect(mp3.StreamSpeechAsync("Hi.", Voice)));
             StringAssert.Contains("audio/mpeg", e.Message);
+        }
 
-            byte[] riff = { (byte)'R', (byte)'I', (byte)'F', (byte)'F', 0, 0, 0, 0 };
-            var wav = new OpenAICompatibleTtsProvider(new HttpClient(new FakeHandler(_ => Pcm(riff, "application/octet-stream"))), "http://localhost:8880/v1", null);
-            e = Assert.Throws<ProviderException>(() => Collect(wav.StreamSpeechAsync("Hi.", Voice)));
-            StringAssert.Contains("WAV", e.Message);
+        [Test]
+        public void ReadsWavRepliesAndResamplesThem()
+        {
+            // Chatterbox-style reply: 16-bit mono WAV at 24 kHz.
+            byte[] wav24 = WavTests.Wav(24000, 1, new short[] { 16384, -16384 });
+            var tts = new OpenAICompatibleTtsProvider(new HttpClient(new FakeHandler(_ => Pcm(wav24, "audio/wav"))), "http://localhost:8004/v1", null);
+            Assert.AreEqual(new[] { 0.5f, -0.5f }, Collect(tts.StreamSpeechAsync("Hi.", Voice)));
+
+            // 48 kHz stereo comes out as 24 kHz mono.
+            var frames = new short[4800 * 2];
+            byte[] wav48 = WavTests.Wav(48000, 2, frames);
+            tts = new OpenAICompatibleTtsProvider(new HttpClient(new FakeHandler(_ => Pcm(wav48, "audio/x-wav"))), "http://localhost:8004/v1", null);
+            Assert.That(Collect(tts.StreamSpeechAsync("Hi.", Voice)).Length, Is.InRange(2398, 2400));
         }
 
         [Test]

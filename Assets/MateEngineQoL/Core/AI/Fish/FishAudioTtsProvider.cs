@@ -65,9 +65,9 @@ namespace MateEngineQoL.AI.Fish
                 timeout.CancelAfter(_connectTimeout);
                 using (HttpResponseMessage response = await ProviderHttp.SendAsync(_http, message, _baseUri, timeout.Token, ct).ConfigureAwait(false))
                 {
-                    ProviderHttp.RequireRawAudio(response, _baseUri.Host);
+                    ProviderHttp.RequireUncompressedAudio(response, _baseUri.Host);
                     Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                    await foreach (float[] chunk in ProviderHttp.ReadPcm16Async(stream, MaxAudioBytes, timeout, _idleTimeout, timeout.Token).ConfigureAwait(false))
+                    await foreach (float[] chunk in ProviderHttp.ReadSpeechAsync(stream, PcmSampleRate, MaxAudioBytes, timeout, _idleTimeout, timeout.Token).ConfigureAwait(false))
                         yield return chunk;
                 }
             }

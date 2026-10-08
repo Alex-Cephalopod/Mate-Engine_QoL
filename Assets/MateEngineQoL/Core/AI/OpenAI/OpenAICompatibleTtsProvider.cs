@@ -14,8 +14,8 @@ using Newtonsoft.Json.Linq;
 namespace MateEngineQoL.AI.OpenAI
 {
     /// <summary>
-    /// Speech from any OpenAI-compatible <c>/audio/speech</c> endpoint with <c>response_format: pcm</c>
-    /// (raw 16-bit mono at 24 kHz): Kokoro-FastAPI on localhost, OpenAI, and others.
+    /// Speech from any OpenAI-compatible <c>/audio/speech</c> endpoint: Kokoro-FastAPI and Chatterbox-TTS-Server on
+    /// localhost, OpenAI, and others. Asks for 16-bit WAV and yields mono at 24 kHz, whatever rate the server uses.
     /// </summary>
     public sealed class OpenAICompatibleTtsProvider : ITtsProvider
     {
@@ -63,9 +63,9 @@ namespace MateEngineQoL.AI.OpenAI
                 timeout.CancelAfter(_connectTimeout);
                 using (HttpResponseMessage response = await ProviderHttp.SendAsync(_http, message, _baseUri, timeout.Token, ct).ConfigureAwait(false))
                 {
-                    ProviderHttp.RequireRawAudio(response, _baseUri.Host);
+                    ProviderHttp.RequireUncompressedAudio(response, _baseUri.Host);
                     Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                    await foreach (float[] chunk in ProviderHttp.ReadPcm16Async(stream, MaxAudioBytes, timeout, _idleTimeout, timeout.Token).ConfigureAwait(false))
+                    await foreach (float[] chunk in ProviderHttp.ReadSpeechAsync(stream, PcmSampleRate, MaxAudioBytes, timeout, _idleTimeout, timeout.Token).ConfigureAwait(false))
                         yield return chunk;
                 }
             }
@@ -79,7 +79,7 @@ namespace MateEngineQoL.AI.OpenAI
                 ["model"] = voice?.Model ?? "",
                 ["input"] = text,
                 ["voice"] = voice?.Voice ?? "",
-                ["response_format"] = "pcm",
+                ["response_format"] = "wav", // every OpenAI-compatible server has it (Chatterbox has no pcm); raw PCM replies are read too
             };
             float speed = voice?.Speed ?? 1f;
             if (Math.Abs(speed - 1f) > 0.001f) body["speed"] = Math.Max(0.5f, Math.Min(2f, speed));

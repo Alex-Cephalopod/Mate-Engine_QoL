@@ -247,6 +247,10 @@ MonoBehaviour:
     m_Key: QOL_TTS_NOTE
     m_Metadata:
       m_Items: []
+  - m_Id: 613410775478272
+    m_Key: QOL_TTS_HINT_CHATTERBOX
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
