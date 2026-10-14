@@ -51,7 +51,7 @@ namespace MateEngineQoL.Build
             ["QOL_TTS_OFF"] = "Off",
             ["QOL_TTS_HINT_OFF"] = "Replies are not spoken.",
             ["QOL_TTS_HINT_KOKORO"] = "Free. Runs on this PC: start Kokoro-FastAPI on port 8880 first.",
-            ["QOL_TTS_HINT_CHATTERBOX"] = "Free. Runs on this PC and copies a voice from a short clip: start Chatterbox-TTS-Server on port 8004 first. VOICE is the clip's file name in its reference_audio folder.",
+            ["QOL_TTS_HINT_CHATTERBOX"] = "Free. Runs on this PC and copies a voice from a short clip: start Chatterbox-TTS-Server on port 8004 first. VOICE is the clip's file name in its reference_audio folder. Turbo plays *chuckles* and *sighs* as sounds.",
             ["QOL_TTS_HINT_OPENAI"] = "Needs an OpenAI key. Paid per use (about $0.015 per minute of speech).",
             ["QOL_TTS_HINT_FISH"] = "Needs a Fish Audio key. Model s2.1-pro-free costs nothing; s1 and s2.1-pro need prepaid API credit. VOICE takes a voice model id from fish.audio.",
             ["QOL_TTS_HINT_CUSTOM"] = "Any OpenAI-compatible /audio/speech server that can return WAV.",

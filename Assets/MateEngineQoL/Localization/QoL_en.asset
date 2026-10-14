@@ -260,7 +260,7 @@ MonoBehaviour:
   - m_Id: 613410775478272
     m_Localized: 'Free. Runs on this PC and copies a voice from a short clip: start
       Chatterbox-TTS-Server on port 8004 first. VOICE is the clip''s file name in
-      its reference_audio folder.'
+      its reference_audio folder. Turbo plays *chuckles* and *sighs* as sounds.'
     m_Metadata:
       m_Items: []
   references:

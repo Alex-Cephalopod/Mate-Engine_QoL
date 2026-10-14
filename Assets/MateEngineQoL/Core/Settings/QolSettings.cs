@@ -72,6 +72,13 @@ namespace MateEngineQoL.Settings
         public float Volume = 1f;
         /// <summary>Don't speak text between asterisks (*smiles*).</summary>
         public bool SkipActions = true;
+        /// <summary>
+        /// Turn sound actions (*chuckles*, *sighs*) into [tags] the server plays as sounds (Chatterbox Turbo).
+        /// Null follows the preset; servers without tags would read them aloud.
+        /// </summary>
+        public bool? SoundTags;
+
+        public bool UsesSoundTags() => SoundTags ?? TtsPresets.Find(Preset)?.SoundTags ?? false;
     }
 
     public static class TtsProviderIds
@@ -91,8 +98,11 @@ namespace MateEngineQoL.Settings
         public readonly string Voice;
         public readonly bool NeedsKey;
         public readonly bool Free;
+        /// <summary>The server plays [laugh]-style sound tags (see <see cref="TtsSettings.SoundTags"/>).</summary>
+        public readonly bool SoundTags;
 
-        public TtsPreset(string id, string displayName, string provider, string baseUrl, string model, string voice, bool needsKey, bool free)
+        public TtsPreset(string id, string displayName, string provider, string baseUrl, string model, string voice, bool needsKey, bool free,
+            bool soundTags = false)
         {
             Id = id;
             DisplayName = displayName;
@@ -102,6 +112,7 @@ namespace MateEngineQoL.Settings
             Voice = voice;
             NeedsKey = needsKey;
             Free = free;
+            SoundTags = soundTags;
         }
     }
 
@@ -110,7 +121,7 @@ namespace MateEngineQoL.Settings
         public static readonly IReadOnlyList<TtsPreset> All = new[]
         {
             new TtsPreset("kokoro", "Kokoro (local)", TtsProviderIds.OpenAICompatible, "http://localhost:8880/v1", "kokoro", "af_heart", false, true),
-            new TtsPreset("chatterbox", "Chatterbox (local)", TtsProviderIds.OpenAICompatible, "http://127.0.0.1:8004/v1", "chatterbox", "voice.wav", false, true),
+            new TtsPreset("chatterbox", "Chatterbox (local)", TtsProviderIds.OpenAICompatible, "http://127.0.0.1:8004/v1", "chatterbox", "voice.wav", false, true, soundTags: true),
             new TtsPreset("openai", "OpenAI", TtsProviderIds.OpenAICompatible, "https://api.openai.com/v1", "gpt-4o-mini-tts", "alloy", true, false),
             new TtsPreset("fish", "Fish Audio", TtsProviderIds.FishAudio, "https://api.fish.audio", "s2.1-pro-free", "", true, false),
             new TtsPreset("custom", "Custom", TtsProviderIds.OpenAICompatible, "", "", "", false, false),

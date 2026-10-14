@@ -305,6 +305,7 @@ namespace MateEngineQoL.Bridge
                     s.Tts.Model = preset.Model;
                     s.Tts.Voice = preset.Voice;
                 }
+                if (!samePreset) s.Tts.SoundTags = null; // follow the new preset
             }
             QolServices.SaveSettings(s);
             RefreshVoice();

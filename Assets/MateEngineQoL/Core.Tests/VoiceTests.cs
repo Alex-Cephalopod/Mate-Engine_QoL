@@ -106,6 +106,69 @@ namespace MateEngineQoL.Tests
             Assert.AreEqual("Title text", f.Filter("## Title `text`"));
             Assert.IsNull(f.Filter("\U0001F600 ... !!"));
         }
+
+        [Test]
+        public void SoundActionsBecomeTagsWhenAsked()
+        {
+            var f = new SpeechFilter(skipActions: true, soundTags: true);
+            Assert.AreEqual("[chuckle] Oh, you!", f.Filter("*chuckles softly* Oh, you!"));
+            Assert.AreEqual("Fine. [sigh]", f.Filter("Fine. *sighs*"));
+            Assert.AreEqual("Hey.", f.Filter("*winks* Hey."), "silent actions stay silent");
+            Assert.IsNull(f.Filter("*winks*"));
+            Assert.AreEqual("[sigh]", f.Filter("*sighs*"), "a lone sound is still sent");
+        }
+
+        [Test]
+        public void SoundActionAcrossSentencesPlaysWhereItCloses()
+        {
+            var f = new SpeechFilter(true, true);
+            Assert.IsNull(f.Filter("*leans back."));
+            Assert.AreEqual("[laugh] Really?", f.Filter("Then giggles* Really?"));
+        }
+
+        [Test]
+        public void SoundActionWordsMapToTags()
+        {
+            Assert.AreEqual("[laugh]", SpeechFilter.SoundTagFor("laughs nervously"));
+            Assert.AreEqual("[laugh]", SpeechFilter.SoundTagFor("Giggling"));
+            Assert.AreEqual("[clear throat]", SpeechFilter.SoundTagFor("clears her throat"));
+            Assert.AreEqual("[cough]", SpeechFilter.SoundTagFor("coughs"));
+            Assert.AreEqual("[gasp]", SpeechFilter.SoundTagFor("gasps"));
+            Assert.AreEqual("[sniff]", SpeechFilter.SoundTagFor("sniffles"));
+            Assert.AreEqual("[groan]", SpeechFilter.SoundTagFor("groans"));
+            Assert.AreEqual("[shush]", SpeechFilter.SoundTagFor("shhh"));
+            Assert.AreEqual("[chuckle]", SpeechFilter.SoundTagFor("smiles and chuckles, then laughs"), "earliest sound wins");
+            Assert.IsNull(SpeechFilter.SoundTagFor("looks at the sights"));
+            Assert.IsNull(SpeechFilter.SoundTagFor("slaughters a dragon"));
+            Assert.IsNull(SpeechFilter.SoundTagFor("winks"));
+        }
+
+        [Test]
+        public void KeepsKnownTagsOnlyWhenAsked()
+        {
+            Assert.AreEqual("[laugh] Yay!", new SpeechFilter(true, true).Filter("[Laugh] [emotion:happy] Yay!"));
+            Assert.AreEqual("Ahem. [clear throat] Hi.", new SpeechFilter(true, true).Filter("Ahem. [clear  throat] Hi."));
+            Assert.AreEqual("Yay!", new SpeechFilter(true).Filter("[laugh] Yay!"));
+            Assert.AreEqual("Hi.", new SpeechFilter(true).Filter("*chuckles* Hi."), "off by default");
+        }
+    }
+
+    public class TtsSoundTagSettingsTests
+    {
+        [Test]
+        public void FollowsPresetUnlessSet()
+        {
+            var t = new MateEngineQoL.Settings.TtsSettings { Preset = "chatterbox" };
+            Assert.IsTrue(t.UsesSoundTags());
+            t.Preset = "kokoro";
+            Assert.IsFalse(t.UsesSoundTags());
+            t.Preset = "custom";
+            t.SoundTags = true;
+            Assert.IsTrue(t.UsesSoundTags());
+            t.Preset = "chatterbox";
+            t.SoundTags = false;
+            Assert.IsFalse(t.UsesSoundTags());
+        }
     }
 
     public class PcmTests

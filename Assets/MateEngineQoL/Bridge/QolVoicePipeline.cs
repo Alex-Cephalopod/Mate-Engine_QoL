@@ -183,7 +183,7 @@ namespace MateEngineQoL.Bridge
             {
                 _inReply = true;
                 _splitter.Reset();
-                _filter = new SpeechFilter(QolServices.Settings.Tts.SkipActions);
+                _filter = new SpeechFilter(QolServices.Settings.Tts.SkipActions, QolServices.Settings.Tts.UsesSoundTags());
             }
             foreach (string sentence in _splitter.Push(delta)) Enqueue(sentence);
         }
@@ -202,7 +202,7 @@ namespace MateEngineQoL.Bridge
             Stop();
             if (Provider == null) return;
             var splitter = new SentenceSplitter();
-            _filter = new SpeechFilter(QolServices.Settings.Tts.SkipActions);
+            _filter = new SpeechFilter(QolServices.Settings.Tts.SkipActions, QolServices.Settings.Tts.UsesSoundTags());
             foreach (string sentence in splitter.Push(text)) Enqueue(sentence);
             string rest = splitter.Flush();
             if (rest != null) Enqueue(rest);
