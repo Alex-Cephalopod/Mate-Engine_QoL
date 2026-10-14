@@ -251,6 +251,78 @@ MonoBehaviour:
     m_Key: QOL_TTS_HINT_CHATTERBOX
     m_Metadata:
       m_Items: []
+  - m_Id: 2778179364171776
+    m_Key: QOL_ANIM_TITLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503424
+    m_Key: QOL_ANIM_IDLES
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503425
+    m_Key: QOL_ANIM_ON
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503426
+    m_Key: QOL_ANIM_OFF
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503427
+    m_Key: QOL_ANIM_CLIP
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503428
+    m_Key: QOL_ANIM_NONE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503429
+    m_Key: QOL_ANIM_PREVIEW
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503430
+    m_Key: QOL_ANIM_FAVOURITE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503431
+    m_Key: QOL_ANIM_UNFAVOURITE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503432
+    m_Key: QOL_ANIM_SET_IDLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503433
+    m_Key: QOL_ANIM_ROTATE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503434
+    m_Key: QOL_ANIM_RELOAD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503435
+    m_Key: QOL_ANIM_OPEN
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503436
+    m_Key: QOL_ANIM_STATUS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503437
+    m_Key: QOL_ANIM_PINNED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503438
+    m_Key: QOL_ANIM_ERROR
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503439
+    m_Key: QOL_ANIM_UNAVAILABLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503440
+    m_Key: QOL_ANIM_NOTE
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

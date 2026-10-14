@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
@@ -65,6 +66,8 @@ namespace MateEngineQoL.Settings
                 if (s.Characters == null) s.Characters = new CharacterSettings();
                 if (s.Context == null) s.Context = new ContextSettings();
                 if (s.Tts == null) s.Tts = new TtsSettings();
+                if (s.Animation == null) s.Animation = new AnimationSettings();
+                if (s.Animation.Favourites == null) s.Animation.Favourites = new List<string>();
                 return s;
             }
             catch (JsonException e)

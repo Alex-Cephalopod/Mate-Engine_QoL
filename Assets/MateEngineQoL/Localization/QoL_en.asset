@@ -263,6 +263,80 @@ MonoBehaviour:
       its reference_audio folder. Turbo plays *chuckles* and *sighs* as sounds.'
     m_Metadata:
       m_Items: []
+  - m_Id: 2778179364171776
+    m_Localized: ANIMATIONS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503424
+    m_Localized: LIBRARY IDLES
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503425
+    m_Localized: On
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503426
+    m_Localized: Off
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503427
+    m_Localized: CLIP
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503428
+    m_Localized: No clips yet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503429
+    m_Localized: PREVIEW
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503430
+    m_Localized: FAVOURITE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503431
+    m_Localized: UNFAVOURITE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503432
+    m_Localized: SET AS IDLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503433
+    m_Localized: ROTATE IDLES
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503434
+    m_Localized: RELOAD FOLDER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503435
+    m_Localized: OPEN FOLDER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503436
+    m_Localized: '{0} clips ({1} idles) in {2}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503437
+    m_Localized: Always idles with {0}.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503438
+    m_Localized: 'Last error: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503439
+    m_Localized: The animation folder is unavailable; see the log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2778179414503440
+    m_Localized: Drop .vrma files (VRM Animation) into the folder; they show up here
+      without a restart. Idles play while the avatar stands still; dragging, dancing,
+      sitting and sleeping take over as usual.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

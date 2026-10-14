@@ -14,6 +14,20 @@ namespace MateEngineQoL.Settings
         public CharacterSettings Characters = new CharacterSettings();
         public ContextSettings Context = new ContextSettings();
         public TtsSettings Tts = new TtsSettings();
+        public AnimationSettings Animation = new AnimationSettings();
+    }
+
+    /// <summary>The animation library (Phase 4): clips in &lt;data folder&gt;/Animations.</summary>
+    public sealed class AnimationSettings
+    {
+        /// <summary>Play the folder's idle clips while the avatar stands idle.</summary>
+        public bool LibraryIdles = true;
+        /// <summary>With several idles, switch to another one after this many seconds.</summary>
+        public float IdleSwitchSeconds = 45f;
+        /// <summary>Clip id always used as the idle ("set as idle" in the library panel); null rotates through the idles.</summary>
+        public string PinnedIdle;
+        /// <summary>Clip ids (paths relative to the folder) starred in the library panel.</summary>
+        public List<string> Favourites = new List<string>();
     }
 
     public sealed class CharacterSettings

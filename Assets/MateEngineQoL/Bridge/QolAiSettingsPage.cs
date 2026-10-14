@@ -18,9 +18,10 @@ namespace MateEngineQoL.Bridge
     /// The "AI PROVIDERS" page in the settings menu. Built at runtime by cloning upstream's own widgets
     /// (Color Menu page, context-length dropdown, system-prompt field) so it matches the menu without
     /// editing the scene. A "PROVIDERS" button next to the AI section header opens it. Below the provider
-    /// rows is the character section (pick, rename, greeting, new chat); the prompt itself stays in upstream's box.
+    /// rows come the voice section, the character section (pick, rename, greeting, new chat; the prompt itself
+    /// stays in upstream's box) and the animation library (QolAiSettingsPage.Animations.cs).
     /// </summary>
-    public sealed class QolAiSettingsPage : MonoBehaviour
+    public sealed partial class QolAiSettingsPage : MonoBehaviour
     {
         const float RowPadding = 4f;
 
@@ -176,6 +177,8 @@ namespace MateEngineQoL.Bridge
             Button newChat = AddButton(content, buttonTemplate, "QOL_NEW_CHAT", () => CharacterManager.Instance?.StartNewSession());
             _characterRows.Add(newChat.gameObject.AddComponent<CanvasGroup>());
             AddText(content, noteTemplate, QolText.Get("QOL_CHARACTER_NOTE"), 40f);
+
+            BuildAnimationRows(content, titleTemplate, dropdownTemplate, noteTemplate, buttonTemplate);
         }
 
         // ---- voice (Phase 2) ---------------------------------------------------
@@ -511,6 +514,7 @@ namespace MateEngineQoL.Bridge
 
             RefreshCharacters();
             RefreshVoice();
+            RefreshAnimations();
 
             _presetHint.text = QolText.Get(!remote ? "QOL_HINT_BUILTIN"
                 : preset == null || preset.Id == "custom" ? "QOL_HINT_CUSTOM"
