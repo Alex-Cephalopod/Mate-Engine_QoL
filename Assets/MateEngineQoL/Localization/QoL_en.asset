@@ -335,7 +335,9 @@ MonoBehaviour:
     m_Localized: 'Drop .vrma files (VRM Animation) into the folder; they show up
       here without a restart. Idles play while the avatar stands still; dragging,
       dancing, sitting and sleeping take over as usual. Clips with "category": "gesture"
-      in their .json can be played by the AI with [action:name] tags.'
+      in their .json can be played by the AI with [action:name] tags. Clips with
+      "category": "sit" replace the sit pose on the taskbar or a window edge ("anchor":
+      "taskbar" or "windowTopEdge"; none fits both).'
     m_Metadata:
       m_Items: []
   - m_Id: 3320140949073920

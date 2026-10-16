@@ -22,6 +22,8 @@ namespace MateEngineQoL.Bridge
             public float Target;
             public float BlendIn = 0.4f;
             public float BlendOut = 0.4f;
+            /// <summary>Keep the hips where upstream put them (sit clips: the window handler calibrates the seat at snap).</summary>
+            public bool PinHips;
 
             public void Step(float dt)
             {
@@ -37,6 +39,7 @@ namespace MateEngineQoL.Bridge
         float _fade = 1f;
 
         Animator _animator;
+        Transform _hips;
         Avatar _boundAvatar;
         HumanPoseHandler _handler;
         HumanPose _avatarPose;
@@ -50,8 +53,11 @@ namespace MateEngineQoL.Bridge
         public QolVrmaClip GestureClip => _gesture.Clip;
         public bool GestureActive => _gesture.Clip != null && (_gesture.Target > 0f || _gesture.Weight > 0f);
 
-        /// <summary>Plays a clip on the full-body layer, crossfading from the one playing.</summary>
-        public void PlayBase(QolVrmaClip clip, bool loop, float blendIn, float blendOut)
+        /// <summary>
+        /// Plays a clip on the full-body layer, crossfading from the one playing. <paramref name="pinHips"/> keeps the
+        /// hips where upstream's pose has them, so a sit clip stays on the seat upstream placed.
+        /// </summary>
+        public void PlayBase(QolVrmaClip clip, bool loop, float blendIn, float blendOut, bool pinHips = false)
         {
             if (clip == null) { ReleaseBase(false); return; }
             if (clip != _base.Clip)
@@ -70,6 +76,7 @@ namespace MateEngineQoL.Bridge
                 clip.Play(loop);
             }
             _base.Loop = loop;
+            _base.PinHips = pinHips;
             _base.BlendIn = blendIn;
             _base.BlendOut = blendOut;
             _base.Target = 1f;
@@ -140,6 +147,8 @@ namespace MateEngineQoL.Bridge
 
             _handler.GetHumanPose(ref _avatarPose);
             if (_avatarPose.muscles == null) return;
+            bool pin = baseOn && _base.PinHips && _hips != null;
+            Vector3 seat = pin ? _hips.position : default;
 
             if (baseOn)
             {
@@ -159,6 +168,7 @@ namespace MateEngineQoL.Bridge
                 Mix(ref _avatarPose, ref _clipPose, Mathf.SmoothStep(0f, 1f, _gesture.Weight), true);
             }
             _handler.SetHumanPose(ref _avatarPose);
+            if (pin) _hips.position = seat;
         }
 
         /// <summary>Moves <paramref name="into"/> toward <paramref name="from"/> by <paramref name="w"/>.</summary>
@@ -210,6 +220,7 @@ namespace MateEngineQoL.Bridge
             if (_handler != null && _boundAvatar == _animator.avatar) return true;
             _handler?.Dispose();
             _handler = new HumanPoseHandler(_animator.avatar, _animator.transform);
+            _hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
             _boundAvatar = _animator.avatar;
             return true;
         }

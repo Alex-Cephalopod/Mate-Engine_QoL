@@ -162,4 +162,42 @@ namespace MateEngineQoL.Tests
             Assert.Throws<ProviderException>(() => ReadSse("data: " + new string('x', 50) + "\n\n", 20));
         }
     }
+
+    public class ProviderErrorMessageTests
+    {
+        [Test]
+        public void UnreachableLocalServerAsksIfItRuns()
+        {
+            string m = ProviderHttp.UnreachableMessage(new Uri("http://127.0.0.1:8004/v1/"), "No connection could be made.");
+            Assert.AreEqual("Could not reach 127.0.0.1:8004: No connection could be made. Is the server running on this PC, on port 8004?", m);
+            StringAssert.StartsWith("Timed out connecting to 127.0.0.1:11434.", ProviderHttp.UnreachableMessage(new Uri("http://127.0.0.1:11434/v1/"), null));
+        }
+
+        [Test]
+        public void UnreachableRemoteServerPointsAtUrlAndInternet()
+        {
+            string m = ProviderHttp.UnreachableMessage(new Uri("https://api.openai.com/v1/"), "No such host is known");
+            Assert.AreEqual("Could not reach api.openai.com: No such host is known. Check the server URL and your internet connection.", m);
+        }
+
+        [Test]
+        public void StatusHintsTellMissingKeyFromWrongKey()
+        {
+            StringAssert.Contains("No API key is set", ProviderHttp.StatusHint(401, false));
+            Assert.AreEqual(" Check the API key.", ProviderHttp.StatusHint(403, true));
+            StringAssert.Contains("credit", ProviderHttp.StatusHint(402, true));
+            StringAssert.Contains("quota", ProviderHttp.StatusHint(429, true));
+            StringAssert.Contains("server had a problem", ProviderHttp.StatusHint(503, true));
+            Assert.AreEqual("", ProviderHttp.StatusHint(400, true));
+        }
+
+        [Test]
+        public void EmptyOrBadServerUrlSaysWhatToEnter()
+        {
+            var e = Assert.Throws<ProviderException>(() => EndpointPolicy.ValidateBaseUrl("  ", false));
+            StringAssert.Contains("SERVER URL", e.Message);
+            e = Assert.Throws<ProviderException>(() => EndpointPolicy.ValidateBaseUrl("127.0.0.1 8004", false));
+            StringAssert.Contains("http://127.0.0.1:8004/v1", e.Message);
+        }
+    }
 }

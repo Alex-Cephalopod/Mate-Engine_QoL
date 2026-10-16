@@ -1,3 +1,6 @@
+<!-- QoL: fork banner -->
+> **Mate Engine QoL fork:** AI providers, voice, animation library and reply tags. See [README-QoL.md](README-QoL.md) for setup and licence notes.
+
 # MateEngine for Linux (Unoffical)
 Github: https://github.com/Marksonthegamer/Mate-Engine-Linux-Port
 

@@ -206,4 +206,35 @@ namespace MateEngineQoL.Tests
             Assert.That(counts["b"] / (double)counts["a"], Is.InRange(2.5, 3.5));
         }
     }
+
+    public class SitPickerTests
+    {
+        static AnimationEntry Sit(string id, string anchor, string category = AnimationCategories.Sit) =>
+            new AnimationEntry { Id = id, Info = new AnimationSidecar { Name = id, Category = category, IdleWeight = 0f, Anchor = anchor } };
+
+        [Test]
+        public void NormalizesAnchors()
+        {
+            Assert.AreEqual(SitAnchors.WindowTopEdge, SitAnchors.Normalize("window_top_edge"));
+            Assert.AreEqual(SitAnchors.WindowTopEdge, SitAnchors.Normalize(" Window "));
+            Assert.AreEqual(SitAnchors.Taskbar, SitAnchors.Normalize("TaskBar"));
+            Assert.IsNull(SitAnchors.Normalize("  "));
+            Assert.AreEqual("chair", SitAnchors.Normalize(" chair"));
+        }
+
+        [Test]
+        public void PrefersClipsForTheAnchorThenAnySeat()
+        {
+            var entries = new[] { Sit("any", null), Sit("bar", "taskbar"), Sit("edge", "windowTopEdge"), Sit("wave", "taskbar", AnimationCategories.Gesture) };
+            var rng = new Random(3);
+            for (int i = 0; i < 20; i++)
+            {
+                Assert.AreEqual("bar", SitPicker.Pick(entries, SitAnchors.Taskbar, rng).Id);
+                Assert.AreEqual("edge", SitPicker.Pick(entries, SitAnchors.WindowTopEdge, rng).Id);
+            }
+            Assert.AreEqual("any", SitPicker.Pick(new[] { Sit("any", null), Sit("edge", "window") }, SitAnchors.Taskbar, rng).Id);
+            Assert.IsNull(SitPicker.Pick(new[] { Sit("edge", "window") }, SitAnchors.Taskbar, rng), "upstream's pose stays");
+            Assert.IsNull(SitPicker.Pick(entries, null, rng));
+        }
+    }
 }

@@ -8,6 +8,7 @@ using LLMUnity;
 using MateEngineQoL.AI;
 using MateEngineQoL.Characters;
 using MateEngineQoL.Tags;
+using MateEngineQoL.Voice;
 using UnityEngine;
 using ChatMessage = MateEngineQoL.AI.ChatMessage; // LLMUnity has its own ChatMessage and ChatRequest
 using ChatRequest = MateEngineQoL.AI.ChatRequest;
@@ -145,7 +146,7 @@ namespace MateEngineQoL.Bridge
             {
                 // LLMCharacter sends its whole chat list; cut it down to the context budget first.
                 int contextSize = llm.llm != null ? llm.llm.contextSize : 0;
-                LoadContextInto(llm, CharacterManager.Instance.BuildContext(message, contextSize, QolReplyTags.PromptInstructions()));
+                LoadContextInto(llm, CharacterManager.Instance.BuildContext(message, contextSize, ReplyInstructions()));
             }
             int countBefore = llm.chat.Count;
 
@@ -228,6 +229,17 @@ namespace MateEngineQoL.Bridge
             }
         }
 
+        /// <summary>What goes after the character prompt: the tag vocabulary, then how to write for the voice.</summary>
+        static string ReplyInstructions()
+        {
+            string tags = QolReplyTags.PromptInstructions();
+            if (!QolVoicePipeline.IsEnabled) return tags;
+            var tts = QolServices.Settings.Tts;
+            string voice = SpeechFilter.PromptText(tts.SkipActions, tts.UsesSoundTags());
+            if (tags.Length == 0) return voice;
+            return voice.Length == 0 ? tags : tags + "\n" + voice;
+        }
+
         /// <summary>Saves a finished exchange, unless the chat was reset (character switch, /new) while it ran.</summary>
         static void Record(string message, string reply, int generation)
         {
@@ -241,7 +253,7 @@ namespace MateEngineQoL.Bridge
             Action<string> onPartial, Action onDone, CancellationToken ct)
         {
             var chat = QolServices.Settings.Chat;
-            string instructions = QolReplyTags.PromptInstructions();
+            string instructions = ReplyInstructions();
             ContextResult context = CharacterManager.IsReady
                 ? CharacterManager.Instance.BuildContext(message, null, instructions)
                 : ContextBuilder.Build(new ContextInput

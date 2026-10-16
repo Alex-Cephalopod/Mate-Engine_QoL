@@ -12,6 +12,8 @@ namespace MateEngineQoL.Bridge
     /// The animation library (Phase 4): watches &lt;data folder&gt;/Animations for <c>.vrma</c> clips, plays the idles on
     /// the avatar while upstream has it standing idle, and hands control back the moment upstream needs it (drag, dance,
     /// talk, sit, sleep: anything that leaves the Animator's Idle state).
+    /// Sit clips (Phase 6) replace upstream's sit pose while it sits on the taskbar or a window's top edge; upstream
+    /// still places the avatar, and the clip keeps the hips where upstream's pose put them.
     /// </summary>
     public sealed class QolAnimationLibrary : MonoBehaviour
     {
@@ -27,6 +29,8 @@ namespace MateEngineQoL.Bridge
         public string Folder => Catalog?.Folder;
         /// <summary>The clip the idle layer is playing, or null.</summary>
         public AnimationEntry CurrentIdle { get; private set; }
+        /// <summary>The sit clip playing while upstream has the avatar seated, or null.</summary>
+        public AnimationEntry CurrentSit { get; private set; }
         /// <summary>Why the last clip failed to load, or null.</summary>
         public string LastError { get; private set; }
 
@@ -39,6 +43,13 @@ namespace MateEngineQoL.Bridge
         QolPoseRetarget _retarget;
         float _nextAvatarSearch;
         float _idleStartedAt;
+        string _sitAnchor;
+        Animator _paramsOf;
+        bool _hasWindowSit, _hasTaskbarSit, _hasSitting;
+
+        static readonly int WindowSitHash = Animator.StringToHash("isWindowSit");
+        static readonly int TaskbarSitHash = Animator.StringToHash("isTaskbarSit");
+        static readonly int SittingHash = Animator.StringToHash("isSitting");
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
@@ -88,6 +99,8 @@ namespace MateEngineQoL.Bridge
             _avatar = null;
             _retarget = null;
             CurrentIdle = null;
+            CurrentSit = null;
+            _sitAnchor = null;
             _nextAvatarSearch = 0f;
         }
 
@@ -101,6 +114,8 @@ namespace MateEngineQoL.Bridge
                 _avatar = FindFirstObjectByType<AvatarAnimatorController>();
                 _retarget = null;
                 CurrentIdle = null;
+                CurrentSit = null;
+                _sitAnchor = null;
                 if (_avatar != null && _avatar.animator != null)
                 {
                     _retarget = _avatar.animator.GetComponent<QolPoseRetarget>()
@@ -108,6 +123,7 @@ namespace MateEngineQoL.Bridge
                 }
             }
             if (_retarget == null) return;
+            if (UpdateSit()) return;
 
             bool idle = _avatar.isIdle && !_avatar.isDragging && !_avatar.isDancing;
             if (!idle || !QolServices.Settings.Animation.LibraryIdles || Catalog == null)
@@ -127,6 +143,71 @@ namespace MateEngineQoL.Bridge
                 || (!CurrentIdle.Info.Loop && _retarget.BaseClip != null
                     && _retarget.BaseClip.Time >= _retarget.BaseClip.Length - CurrentIdle.Info.BlendOut);
             if (due) PlayNextIdle();
+        }
+
+        /// <summary>
+        /// Plays a sit clip for the seat upstream reports, or releases it once upstream stands the avatar up. True while
+        /// a sit clip owns the base layer, so the idle logic keeps out.
+        /// </summary>
+        bool UpdateSit()
+        {
+            string anchor = QolServices.Settings.Animation.LibraryIdles && Catalog != null && !_avatar.isDragging && !_avatar.isDancing
+                ? SeatAnchor(_avatar.animator) : null;
+            if (anchor == null)
+            {
+                if (CurrentSit != null)
+                {
+                    _retarget.ReleaseBase(_avatar.isDragging || _avatar.isDancing);
+                    CurrentSit = null;
+                }
+                _sitAnchor = null;
+                return false;
+            }
+            if (anchor == _sitAnchor && CurrentSit != null) return true;
+            if (anchor == _sitAnchor) return false; // no clip for this seat: upstream's pose stays
+
+            _sitAnchor = anchor;
+            CurrentIdle = null;
+            var usable = new List<AnimationEntry>();
+            foreach (AnimationEntry e in Catalog.Entries)
+                if (!_broken.Contains(e.Id)) usable.Add(e);
+            AnimationEntry next = SitPicker.Pick(usable, anchor, _rng);
+            QolVrmaClip clip = next != null ? Load(next) : null;
+            if (clip == null)
+            {
+                if (CurrentSit != null) _retarget.ReleaseBase(false);
+                CurrentSit = null;
+                return false;
+            }
+            CurrentSit = next;
+            _retarget.PlayBase(clip, next.Info.Loop, next.Info.BlendIn, next.Info.BlendOut, pinHips: true);
+            return true;
+        }
+
+        /// <summary>
+        /// The seat upstream has the avatar on: <see cref="SitAnchors.Taskbar"/> (AvatarTaskbarController's isSitting,
+        /// or AvatarWindowHandler snapped to the taskbar), <see cref="SitAnchors.WindowTopEdge"/> (snapped to a
+        /// window), or null when it isn't sitting. Parameters a custom controller lacks count as false.
+        /// </summary>
+        string SeatAnchor(Animator animator)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return null;
+            if (_paramsOf != animator)
+            {
+                _paramsOf = animator;
+                _hasWindowSit = _hasTaskbarSit = _hasSitting = false;
+                foreach (AnimatorControllerParameter p in animator.parameters)
+                {
+                    if (p.type != AnimatorControllerParameterType.Bool) continue;
+                    if (p.nameHash == WindowSitHash) _hasWindowSit = true;
+                    else if (p.nameHash == TaskbarSitHash) _hasTaskbarSit = true;
+                    else if (p.nameHash == SittingHash) _hasSitting = true;
+                }
+            }
+            bool windowSit = _hasWindowSit && animator.GetBool(WindowSitHash);
+            if ((_hasSitting && animator.GetBool(SittingHash)) || (windowSit && _hasTaskbarSit && animator.GetBool(TaskbarSitHash)))
+                return SitAnchors.Taskbar;
+            return windowSit ? SitAnchors.WindowTopEdge : null;
         }
 
         void PlayNextIdle()
@@ -250,6 +331,7 @@ namespace MateEngineQoL.Bridge
             _cache.Remove(id);
             if (_retarget != null) _retarget.Forget(c.Clip);
             if (CurrentIdle != null && string.Equals(CurrentIdle.Id, id, StringComparison.OrdinalIgnoreCase)) CurrentIdle = null;
+            if (CurrentSit != null && string.Equals(CurrentSit.Id, id, StringComparison.OrdinalIgnoreCase)) { CurrentSit = null; _sitAnchor = null; }
             c.Clip.Dispose();
         }
 
@@ -263,6 +345,8 @@ namespace MateEngineQoL.Bridge
             }
             // A sidecar edit (weight, loop) applies on the next pick.
             if (CurrentIdle != null) CurrentIdle = Catalog.Find(CurrentIdle.Id) is AnimationEntry fresh && _cache.ContainsKey(fresh.Id) ? fresh : null;
+            // A new or edited sit clip is picked up while still seated.
+            if (CurrentSit == null) _sitAnchor = null;
             foreach (string s in Catalog.Skipped) Debug.LogWarning("[QoL Animation] Skipped " + s);
             CatalogChanged?.Invoke();
         }

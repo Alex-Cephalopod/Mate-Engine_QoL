@@ -28,7 +28,7 @@ namespace MateEngineQoL.Animations
         public bool Loop = true;
         /// <summary>Chance of being picked as an idle, relative to the other idles. 0 = never picked.</summary>
         public float IdleWeight = 1f;
-        /// <summary>Where a sit clip attaches ("taskbar", "windowTopEdge"); null for standing clips. Used in Phase 6.</summary>
+        /// <summary>Where a sit clip attaches ("taskbar", "windowTopEdge", see <see cref="SitAnchors"/>); null fits every seat.</summary>
         public string Anchor;
         public float BlendIn = 0.4f;
         public float BlendOut = 0.4f;

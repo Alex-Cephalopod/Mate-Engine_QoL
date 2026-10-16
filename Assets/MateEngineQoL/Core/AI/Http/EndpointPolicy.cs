@@ -11,14 +11,16 @@ namespace MateEngineQoL.AI.Http
         /// </summary>
         public static Uri ValidateBaseUrl(string baseUrl, bool sendsSecret)
         {
-            if (!Uri.TryCreate((baseUrl ?? "").Trim(), UriKind.Absolute, out Uri uri))
-                throw new ProviderException("The base URL is not a valid absolute URL.");
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                throw new ProviderException("No server URL is set; enter one in SERVER URL.");
+            if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out Uri uri))
+                throw new ProviderException("The server URL is not a valid address; it should look like http://127.0.0.1:8004/v1.");
 
             if (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)
-                throw new ProviderException("The base URL must start with https:// (or http:// for a local server).");
+                throw new ProviderException("The server URL must start with https:// (or http:// for a local server).");
 
             if (!string.IsNullOrEmpty(uri.UserInfo))
-                throw new ProviderException("Don't put credentials in the base URL; use the API key field.");
+                throw new ProviderException("Don't put credentials in the server URL; use API KEY.");
 
             if (uri.Scheme == Uri.UriSchemeHttp && sendsSecret && !uri.IsLoopback)
                 throw new ProviderException("Refusing to send an API key over plain http to " + uri.Host + ". Use https.");

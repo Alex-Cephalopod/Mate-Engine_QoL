@@ -229,4 +229,56 @@ namespace MateEngineQoL.Animations
 
         static bool IsCurrent(AnimationEntry e, string id) => string.Equals(e.Id, id, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>Where a sit clip attaches: the sidecar's <c>anchor</c>, matched to what upstream reports.</summary>
+    public static class SitAnchors
+    {
+        public const string Taskbar = "taskbar";
+        public const string WindowTopEdge = "windowTopEdge";
+
+        /// <summary>
+        /// The anchor a sidecar value means ("window_top_edge", "Window" → <see cref="WindowTopEdge"/>), null for an
+        /// empty value (any seat), or the trimmed value unchanged when it names neither.
+        /// </summary>
+        public static string Normalize(string anchor)
+        {
+            if (string.IsNullOrWhiteSpace(anchor)) return null;
+            var sb = new StringBuilder(anchor.Length);
+            foreach (char c in anchor)
+                if (char.IsLetterOrDigit(c)) sb.Append(char.ToLowerInvariant(c));
+            switch (sb.ToString())
+            {
+                case "taskbar": return Taskbar;
+                case "window":
+                case "windowtop":
+                case "windowtopedge":
+                case "windowedge": return WindowTopEdge;
+                default: return anchor.Trim();
+            }
+        }
+    }
+
+    public static class SitPicker
+    {
+        /// <summary>
+        /// Picks a sit clip (category <c>sit</c>) for <paramref name="anchor"/>: one anchored there if any, else one
+        /// with no anchor, which fits every seat. Chosen at random among the candidates; null when there is none and
+        /// upstream's own sit pose should stay.
+        /// </summary>
+        public static AnimationEntry Pick(IReadOnlyList<AnimationEntry> entries, string anchor, Random rng)
+        {
+            if (entries == null || anchor == null) return null;
+            var exact = new List<AnimationEntry>();
+            var any = new List<AnimationEntry>();
+            foreach (AnimationEntry e in entries)
+            {
+                if (e?.Info == null || !string.Equals(e.Info.Category, AnimationCategories.Sit, StringComparison.Ordinal)) continue;
+                string a = SitAnchors.Normalize(e.Info.Anchor);
+                if (a == null) any.Add(e);
+                else if (string.Equals(a, anchor, StringComparison.Ordinal)) exact.Add(e);
+            }
+            List<AnimationEntry> from = exact.Count > 0 ? exact : any;
+            return from.Count == 0 ? null : from[rng.Next(from.Count)];
+        }
+    }
 }

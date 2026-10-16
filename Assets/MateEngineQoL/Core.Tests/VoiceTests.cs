@@ -151,6 +151,29 @@ namespace MateEngineQoL.Tests
             Assert.AreEqual("Yay!", new SpeechFilter(true).Filter("[laugh] Yay!"));
             Assert.AreEqual("Hi.", new SpeechFilter(true).Filter("*chuckles* Hi."), "off by default");
         }
+
+        [Test]
+        public void DropsNarrationWrittenInBrackets()
+        {
+            const string reply = "[smiling warmly, eyes sparkling with friendly interest] Oh, that sounds adorable!";
+            Assert.AreEqual("Oh, that sounds adorable!", new SpeechFilter(true).Filter(reply));
+            Assert.AreEqual("Oh, that sounds adorable!", new SpeechFilter(true, true).Filter(reply));
+            Assert.AreEqual("Okay. [sigh]", new SpeechFilter(true, true).Filter("Okay. [lets out a contented sigh]"));
+            Assert.AreEqual("Okay.", new SpeechFilter(true).Filter("Okay. [sighs]"));
+            Assert.AreEqual("Hi.", new SpeechFilter(true, true).Filter("[action: sighs] Hi."), "key:value tags never play");
+        }
+
+        [Test]
+        public void PromptTextFollowsSettings()
+        {
+            Assert.AreEqual("", SpeechFilter.PromptText(false, false));
+            string actions = SpeechFilter.PromptText(true, false);
+            StringAssert.Contains("*asterisks*", actions);
+            StringAssert.DoesNotContain("[laugh]", actions);
+            string both = SpeechFilter.PromptText(true, true);
+            StringAssert.Contains("[clear throat]", both);
+            StringAssert.Contains("[groan]", both);
+        }
     }
 
     public class TtsSoundTagSettingsTests

@@ -27,17 +27,18 @@ namespace MateEngineQoL.AI.Http
             CancellationToken token, CancellationToken userToken)
         {
             HttpResponseMessage response;
+            bool sentKey = message.Headers.Authorization != null || message.Headers.Contains("x-api-key");
             try
             {
                 response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!userToken.IsCancellationRequested)
             {
-                throw new ProviderException("Timed out connecting to " + baseUri.Host + ".");
+                throw new ProviderException(UnreachableMessage(baseUri, null));
             }
             catch (HttpRequestException e)
             {
-                throw new ProviderException("Could not reach " + baseUri.Host + ": " + OneLine(e.InnerException?.Message ?? e.Message), null, e);
+                throw new ProviderException(UnreachableMessage(baseUri, OneLine(e.InnerException?.Message ?? e.Message)), null, e);
             }
             finally
             {
@@ -50,12 +51,34 @@ namespace MateEngineQoL.AI.Http
             {
                 string detail = await ReadErrorAsync(response).ConfigureAwait(false);
                 int code = (int)response.StatusCode;
-                string hint = code == 401 || code == 403 ? " Check the API key."
-                    : code == 402 ? " The account has no API credit left (a free model, if the provider has one, avoids this)."
-                    : code == 404 ? " Check the base URL and model name."
-                    : "";
-                throw new ProviderException(baseUri.Host + " returned " + code + " " + response.ReasonPhrase + ": " + detail + hint, code);
+                throw new ProviderException(baseUri.Host + " returned " + code + " " + response.ReasonPhrase + ": " + detail + StatusHint(code, sentKey), code);
             }
+        }
+
+        /// <summary>
+        /// One line for a server that couldn't be reached (<paramref name="detail"/> null = timed out), with what to
+        /// check: a local server that isn't running, or the URL and the internet connection for a remote one.
+        /// </summary>
+        public static string UnreachableMessage(Uri baseUri, string detail)
+        {
+            bool local = baseUri.IsLoopback;
+            string where = local ? baseUri.Host + ":" + baseUri.Port : baseUri.Host;
+            string head = detail == null ? "Timed out connecting to " + where + "." : "Could not reach " + where + ": " + detail.TrimEnd('.') + ".";
+            return head + (local
+                ? " Is the server running on this PC, on port " + baseUri.Port + "?"
+                : " Check the server URL and your internet connection.");
+        }
+
+        /// <summary>What to check after an HTTP error status, or "".</summary>
+        public static string StatusHint(int code, bool sentKey)
+        {
+            if (code == 401 || code == 403)
+                return sentKey ? " Check the API key." : " No API key is set; paste one into API KEY.";
+            if (code == 402) return " The account has no API credit left (a free model, if the provider has one, avoids this).";
+            if (code == 404) return " Check the server URL and model name.";
+            if (code == 429) return " Too many requests or out of quota; wait a moment or check the plan.";
+            if (code >= 500) return " The server had a problem; try again, or check its console.";
+            return "";
         }
 
         /// <summary>
