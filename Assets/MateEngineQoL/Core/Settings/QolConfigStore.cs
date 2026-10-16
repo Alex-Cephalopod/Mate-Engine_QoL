@@ -68,6 +68,7 @@ namespace MateEngineQoL.Settings
                 if (s.Tts == null) s.Tts = new TtsSettings();
                 if (s.Animation == null) s.Animation = new AnimationSettings();
                 if (s.Animation.Favourites == null) s.Animation.Favourites = new List<string>();
+                if (s.Tags == null) s.Tags = new TagSettings();
                 return s;
             }
             catch (JsonException e)

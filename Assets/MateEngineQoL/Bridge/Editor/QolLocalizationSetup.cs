@@ -96,7 +96,10 @@ namespace MateEngineQoL.Build
             ["QOL_ANIM_PINNED"] = "Always idles with {0}.",
             ["QOL_ANIM_ERROR"] = "Last error: {0}",
             ["QOL_ANIM_UNAVAILABLE"] = "The animation folder is unavailable; see the log.",
-            ["QOL_ANIM_NOTE"] = "Drop .vrma files (VRM Animation) into the folder; they show up here without a restart. Idles play while the avatar stands still; dragging, dancing, sitting and sleeping take over as usual.",
+            ["QOL_ANIM_NOTE"] = "Drop .vrma files (VRM Animation) into the folder; they show up here without a restart. Idles play while the avatar stands still; dragging, dancing, sitting and sleeping take over as usual. Clips with \"category\": \"gesture\" in their .json can be played by the AI with [action:name] tags.",
+            ["QOL_ANIM_TAGS"] = "EMOTION TAGS",
+            ["QOL_ANIM_ACTIONS"] = "AI gestures: {0}.",
+            ["QOL_ANIM_NO_ACTIONS"] = "No gesture clips yet, so the AI only changes its face.",
         };
 
         [MenuItem("MateEngine/QoL/Update QoL String Table")]

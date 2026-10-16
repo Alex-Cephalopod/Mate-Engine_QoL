@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using LLMUnity;
 using MateEngineQoL.AI;
 using MateEngineQoL.Characters;
+using MateEngineQoL.Tags;
 using UnityEngine;
 using ChatMessage = MateEngineQoL.AI.ChatMessage; // LLMUnity has its own ChatMessage and ChatRequest
 using ChatRequest = MateEngineQoL.AI.ChatRequest;
@@ -18,6 +19,8 @@ namespace MateEngineQoL.Bridge
     /// With the "upstream-local" provider it calls LLMCharacter.Chat after trimming its chat to the context budget.
     /// Otherwise it streams from the configured remote provider. Finished exchanges go to the active character's
     /// session log (CharacterManager); if characters failed to load, upstream's prompt, history and save are used.
+    /// Reply text goes through a <see cref="TagParser"/>: [emotion:x] / [action:x] tags are raised as
+    /// <see cref="TagReceived"/> and never reach the bubble, the voice or the saved history.
     /// </summary>
     public static class QolChatRouter
     {
@@ -32,6 +35,9 @@ namespace MateEngineQoL.Bridge
 
         /// <summary>Raised on the main thread with the full reply once it ends (not raised on errors or cancel).</summary>
         public static event Action<string> ReplyCompleted;
+
+        /// <summary>Raised on the main thread for each emotion or action tag as it streams in (Phase 5).</summary>
+        public static event Action<ReplyTag> TagReceived;
 
         /// <summary>True when chat goes to a QoL provider, so the local model's warm-up doesn't gate input.</summary>
         public static bool UsesRemoteProvider
@@ -139,30 +145,73 @@ namespace MateEngineQoL.Bridge
             {
                 // LLMCharacter sends its whole chat list; cut it down to the context budget first.
                 int contextSize = llm.llm != null ? llm.llm.contextSize : 0;
-                LoadContextInto(llm, CharacterManager.Instance.BuildContext(message, contextSize));
+                LoadContextInto(llm, CharacterManager.Instance.BuildContext(message, contextSize, QolReplyTags.PromptInstructions()));
             }
             int countBefore = llm.chat.Count;
 
             int emitted = 0;
             string last = "";
+            var parser = new TagParser();
+            var tags = new List<ReplyTag>();
+            var shown = new StringBuilder();
             _ = llm.Chat(message,
                 partial =>
                 {
                     partial = partial ?? "";
-                    // LLMUnity reports cumulative text; turn it into deltas for listeners.
-                    if (partial.Length > emitted && partial.StartsWith(last, StringComparison.Ordinal))
-                        ReplyDelta?.Invoke(partial.Substring(emitted));
+                    // LLMUnity reports cumulative text; turn it into deltas for the tag parser and listeners.
+                    if (partial.StartsWith(last, StringComparison.Ordinal))
+                    {
+                        if (partial.Length > emitted) Show(parser.Push(partial.Substring(emitted), tags), shown);
+                    }
+                    else
+                    {
+                        // The text was rewritten: start over without raising its tags again.
+                        parser = new TagParser();
+                        shown.Clear().Append(parser.Push(partial, new List<ReplyTag>()));
+                    }
                     emitted = partial.Length;
                     last = partial;
-                    onPartial(partial);
+                    RaiseTags(tags);
+                    onPartial(shown.ToString());
                 },
                 () =>
                 {
-                    // LLMCharacter appends the exchange to its chat when it has a result.
-                    if (llm.chat.Count >= countBefore + 2) Record(message, llm.chat[llm.chat.Count - 1].content, generation);
-                    ReplyCompleted?.Invoke(last);
+                    string tail = parser.Flush();
+                    if (tail.Length > 0)
+                    {
+                        Show(tail, shown);
+                        onPartial(shown.ToString());
+                    }
+                    // LLMCharacter appends the exchange to its chat when it has a result; keep it without the tags.
+                    if (llm.chat.Count >= countBefore + 2)
+                    {
+                        LLMUnity.ChatMessage reply = llm.chat[llm.chat.Count - 1];
+                        reply.content = TagParser.Strip(reply.content).Trim();
+                        llm.chat[llm.chat.Count - 1] = reply;
+                        Record(message, reply.content, generation);
+                    }
+                    ReplyCompleted?.Invoke(shown.ToString());
                     onDone();
                 });
+        }
+
+        /// <summary>Appends visible reply text and passes it to the voice pipeline.</summary>
+        static void Show(string visible, StringBuilder shown)
+        {
+            if (visible.Length == 0) return;
+            shown.Append(visible);
+            ReplyDelta?.Invoke(visible);
+        }
+
+        static void RaiseTags(List<ReplyTag> tags)
+        {
+            if (tags.Count == 0) return;
+            foreach (ReplyTag tag in tags)
+            {
+                try { TagReceived?.Invoke(tag); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+            tags.Clear();
         }
 
         /// <summary>Replaces LLMCharacter's chat with the built context, minus the new message (Chat adds that).</summary>
@@ -192,11 +241,13 @@ namespace MateEngineQoL.Bridge
             Action<string> onPartial, Action onDone, CancellationToken ct)
         {
             var chat = QolServices.Settings.Chat;
+            string instructions = QolReplyTags.PromptInstructions();
             ContextResult context = CharacterManager.IsReady
-                ? CharacterManager.Instance.BuildContext(message)
+                ? CharacterManager.Instance.BuildContext(message, null, instructions)
                 : ContextBuilder.Build(new ContextInput
                 {
                     Prompt = llm.prompt,
+                    Instructions = instructions,
                     History = FromUpstreamChat(llm),
                     NewMessage = message,
                 }, QolServices.Settings.Context);
@@ -210,14 +261,24 @@ namespace MateEngineQoL.Bridge
             };
 
             var reply = new StringBuilder();
+            var parser = new TagParser();
+            var tags = new List<ReplyTag>();
             bool completed = false;
             try
             {
                 // Awaited on the main thread: Unity's SynchronizationContext resumes here, so callbacks are safe.
                 await foreach (string delta in provider.StreamReplyAsync(request, ct))
                 {
-                    reply.Append(delta);
-                    ReplyDelta?.Invoke(delta);
+                    string visible = parser.Push(delta, tags);
+                    RaiseTags(tags);
+                    if (visible.Length == 0) continue; // only a tag, or text held back until its bracket closes
+                    Show(visible, reply);
+                    onPartial(reply.ToString());
+                }
+                string tail = parser.Flush();
+                if (tail.Length > 0)
+                {
+                    Show(tail, reply);
                     onPartial(reply.ToString());
                 }
                 completed = true;

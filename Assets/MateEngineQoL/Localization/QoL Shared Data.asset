@@ -323,6 +323,18 @@ MonoBehaviour:
     m_Key: QOL_ANIM_NOTE
     m_Metadata:
       m_Items: []
+  - m_Id: 3320140949073920
+    m_Key: QOL_ANIM_TAGS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3320140991016960
+    m_Key: QOL_ANIM_ACTIONS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3320140991016961
+    m_Key: QOL_ANIM_NO_ACTIONS
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -10,6 +10,8 @@ namespace MateEngineQoL.AI
     {
         /// <summary>The character prompt. Never trimmed; if it alone exceeds the budget, <see cref="ContextResult.PromptOverBudget"/> is set.</summary>
         public string Prompt = "";
+        /// <summary>App instructions appended after the prompt (the reply-tag vocabulary). Never trimmed; counted with the prompt.</summary>
+        public string Instructions = "";
         /// <summary>Long-term facts, most important first (Phase 8b). Trimmed from the end to the facts budget.</summary>
         public IReadOnlyList<string> Facts;
         /// <summary>Rolling summary of older turns (Phase 8b). Trimmed from the start to the summary budget, keeping the newest part.</summary>
@@ -56,7 +58,9 @@ namespace MateEngineQoL.AI
             string facts = TrimFacts(input.Facts, Math.Max(0, budget.FactsTokens), countTokens);
             string summary = TrimSummary(input.Summary, Math.Max(0, budget.SummaryTokens), countTokens);
 
+            string instructions = (input.Instructions ?? "").Trim();
             var system = new StringBuilder(prompt);
+            if (instructions.Length > 0) Section(system, instructions);
             if (facts.Length > 0) Section(system, "Things you remember about the user:\n" + facts);
             if (summary.Length > 0) Section(system, "Summary of the earlier conversation:\n" + summary);
             string systemText = system.ToString();
@@ -68,7 +72,7 @@ namespace MateEngineQoL.AI
                 result.Messages.Add(new ChatMessage(ChatMessage.System, systemText));
                 used += countTokens(systemText) + MessageOverhead;
             }
-            result.PromptOverBudget = countTokens(prompt) + MessageOverhead > available;
+            result.PromptOverBudget = countTokens(prompt) + countTokens(instructions) + MessageOverhead > available;
 
             string newMessage = input.NewMessage ?? "";
             used += countTokens(newMessage) + MessageOverhead;

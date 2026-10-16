@@ -332,9 +332,22 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 2778179414503440
-    m_Localized: Drop .vrma files (VRM Animation) into the folder; they show up here
-      without a restart. Idles play while the avatar stands still; dragging, dancing,
-      sitting and sleeping take over as usual.
+    m_Localized: 'Drop .vrma files (VRM Animation) into the folder; they show up
+      here without a restart. Idles play while the avatar stands still; dragging,
+      dancing, sitting and sleeping take over as usual. Clips with "category": "gesture"
+      in their .json can be played by the AI with [action:name] tags.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3320140949073920
+    m_Localized: EMOTION TAGS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3320140991016960
+    m_Localized: 'AI gestures: {0}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3320140991016961
+    m_Localized: No gesture clips yet, so the AI only changes its face.
     m_Metadata:
       m_Items: []
   references:

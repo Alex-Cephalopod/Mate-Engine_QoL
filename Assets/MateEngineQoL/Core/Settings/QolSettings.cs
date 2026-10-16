@@ -15,6 +15,18 @@ namespace MateEngineQoL.Settings
         public ContextSettings Context = new ContextSettings();
         public TtsSettings Tts = new TtsSettings();
         public AnimationSettings Animation = new AnimationSettings();
+        public TagSettings Tags = new TagSettings();
+    }
+
+    /// <summary>Emotion and action tags in replies (Phase 5): [emotion:happy] sets the face, [action:wave] plays a gesture.</summary>
+    public sealed class TagSettings
+    {
+        /// <summary>Tell the model about the tags and act on them. Tags are stripped from the bubble and voice either way.</summary>
+        public bool Enabled = true;
+        /// <summary>Weight of the expression an emotion tag sets, 0..1.</summary>
+        public float ExpressionIntensity = 0.8f;
+        /// <summary>The expression stays this many seconds after the reply has been shown and spoken, then fades.</summary>
+        public float HoldSeconds = 4f;
     }
 
     /// <summary>The animation library (Phase 4): clips in &lt;data folder&gt;/Animations.</summary>

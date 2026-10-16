@@ -228,7 +228,8 @@ namespace MateEngineQoL.Bridge
         // ---- context ---------------------------------------------------------------
 
         /// <summary>Context for the next message, within the configured token budgets.</summary>
-        public ContextResult BuildContext(string newMessage, int? contextLimit = null)
+        /// <param name="instructions">App instructions after the character prompt (the reply-tag vocabulary).</param>
+        public ContextResult BuildContext(string newMessage, int? contextLimit = null, string instructions = null)
         {
             ContextSettings budget = QolServices.Settings.Context;
             if (contextLimit.HasValue && contextLimit.Value > 0 && contextLimit.Value < budget.TotalTokens)
@@ -245,6 +246,7 @@ namespace MateEngineQoL.Bridge
             ContextResult result = ContextBuilder.Build(new ContextInput
             {
                 Prompt = Active?.Prompt ?? "",
+                Instructions = instructions ?? "",
                 History = _history,
                 NewMessage = newMessage,
             }, budget);

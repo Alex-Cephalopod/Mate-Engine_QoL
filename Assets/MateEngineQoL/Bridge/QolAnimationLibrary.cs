@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using MateEngineQoL.Animations;
 using MateEngineQoL.Settings;
+using MateEngineQoL.Tags;
 using UnityEngine;
 
 namespace MateEngineQoL.Bridge
@@ -153,7 +154,7 @@ namespace MateEngineQoL.Bridge
             _retarget.PlayBase(clip, next.Info.Loop, next.Info.BlendIn, next.Info.BlendOut);
         }
 
-        /// <summary>Plays a clip once on the upper body (a gesture), over whatever the avatar is doing. Phase 5 uses this.</summary>
+        /// <summary>Plays a clip once on the upper body (a gesture), over whatever the avatar is doing.</summary>
         public bool PlayGesture(string id)
         {
             AnimationEntry entry = Catalog?.Find(id);
@@ -162,6 +163,17 @@ namespace MateEngineQoL.Bridge
             if (clip == null) return false;
             _retarget.PlayGesture(clip, false, entry.Info.BlendIn, entry.Info.BlendOut);
             return true;
+        }
+
+        /// <summary>
+        /// Plays the gesture an [action:name] tag names (by gesture name, then sidecar tag). False when there is none,
+        /// or while the avatar is dragged or dancing.
+        /// </summary>
+        public bool PlayAction(string name)
+        {
+            if (_avatar == null || _avatar.isDragging || _avatar.isDancing) return false;
+            AnimationEntry entry = ReplyTagVocabulary.FindAction(Catalog?.Entries, name);
+            return entry != null && !_broken.Contains(entry.Id) && PlayGesture(entry.Id);
         }
 
         /// <summary>Keeps one clip as the idle instead of rotating (the panel's "set as idle"); null rotates again.</summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using MateEngineQoL.Animations;
 using MateEngineQoL.Settings;
+using MateEngineQoL.Tags;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,7 +13,7 @@ namespace MateEngineQoL.Bridge
     /// <summary>The ANIMATIONS section (Phase 4 library panel): idles on/off, the clips, preview, favourite, set as idle.</summary>
     public sealed partial class QolAiSettingsPage
     {
-        TMP_Dropdown _animIdles, _animClip;
+        TMP_Dropdown _animIdles, _animTags, _animClip;
         Button _animFavourite, _animPin;
         TMP_Text _animStatus;
         readonly List<string> _animClipIds = new List<string>();
@@ -33,6 +34,17 @@ namespace MateEngineQoL.Bridge
                 s.Animation.LibraryIdles = i == 0;
                 QolServices.SaveSettings(s);
                 RefreshAnimations();
+            });
+
+            _animTags = AddDropdown(content, dropdownTemplate, "QOL_ANIM_TAGS");
+            _animTags.ClearOptions();
+            _animTags.AddOptions(new List<string> { QolText.Get("QOL_ANIM_ON"), QolText.Get("QOL_ANIM_OFF") });
+            _animTags.onValueChanged.AddListener(i =>
+            {
+                QolSettings s = QolServices.Settings;
+                s.Tags.Enabled = i == 0;
+                QolServices.SaveSettings(s);
+                RefreshAnimationStatus();
             });
 
             _animClip = AddDropdown(content, dropdownTemplate, "QOL_ANIM_CLIP");
@@ -67,6 +79,8 @@ namespace MateEngineQoL.Bridge
             AnimationSettings a = QolServices.Settings.Animation;
             _animIdles.SetValueWithoutNotify(a.LibraryIdles ? 0 : 1);
             _animIdles.RefreshShownValue();
+            _animTags.SetValueWithoutNotify(QolServices.Settings.Tags.Enabled ? 0 : 1);
+            _animTags.RefreshShownValue();
 
             string selected = SelectedClip();
             _animClipIds.Clear();
@@ -126,6 +140,13 @@ namespace MateEngineQoL.Bridge
             int idles = 0;
             foreach (AnimationEntry e in lib.Catalog.Entries) if (e.IsIdle) idles++;
             string status = QolText.Format("QOL_ANIM_STATUS", lib.Catalog.Entries.Count, idles, lib.Folder);
+            if (QolServices.Settings.Tags.Enabled)
+            {
+                List<string> actions = ReplyTagVocabulary.ActionNames(lib.Catalog.Entries);
+                status += " " + (actions.Count > 0
+                    ? QolText.Format("QOL_ANIM_ACTIONS", string.Join(", ", actions))
+                    : QolText.Get("QOL_ANIM_NO_ACTIONS"));
+            }
             string pinned = QolServices.Settings.Animation.PinnedIdle;
             if (pinned != null) status += " " + QolText.Format("QOL_ANIM_PINNED", lib.Catalog.Find(pinned)?.Info.Name ?? pinned);
             if (lib.LastError != null) status += " " + QolText.Format("QOL_ANIM_ERROR", lib.LastError);
